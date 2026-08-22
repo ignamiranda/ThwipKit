@@ -26,13 +26,37 @@ internal static class TestFileFixtures
     }
 
     public static (string Path, byte[] Dat1) CreateTocFixture(string path)
+        => CreateTocFixture(path, ["Archive0"]);
+
+    public static (string Path, byte[] Dat1) CreateTocFixture(string path, IReadOnlyList<string> archiveNames)
     {
         var sections = new[]
         {
-            (Tag: new byte[] { 0xF0, 0xBF, 0x8A, 0x39 }, Data: CreateArchiveEntry("Archive0")),
-            (Tag: new byte[] { 0x8A, 0x7B, 0x6D, 0x50 }, Data: Write(writer => writer.Write(0x1122334455667788UL))),
-            (Tag: new byte[] { 0x61, 0xF4, 0xBC, 0x65 }, Data: Write(writer => { writer.Write(1U); writer.Write(123U); writer.Write(0U); })),
-            (Tag: new byte[] { 0xB5, 0x20, 0xD7, 0xDC }, Data: Write(writer => { writer.Write(0U); writer.Write(456U); }))
+            (Tag: new byte[] { 0xF0, 0xBF, 0x8A, 0x39 }, Data: archiveNames.SelectMany(CreateArchiveEntry).ToArray()),
+            (Tag: new byte[] { 0x8A, 0x7B, 0x6D, 0x50 }, Data: Write(writer =>
+            {
+                for (int i = 0; i < archiveNames.Count; i++)
+                {
+                    writer.Write(0x1122334455667788UL + (ulong)i);
+                }
+            })),
+            (Tag: new byte[] { 0x61, 0xF4, 0xBC, 0x65 }, Data: Write(writer =>
+            {
+                for (int i = 0; i < archiveNames.Count; i++)
+                {
+                    writer.Write(1U);
+                    writer.Write(123U + (uint)i);
+                    writer.Write((uint)i);
+                }
+            })),
+            (Tag: new byte[] { 0xB5, 0x20, 0xD7, 0xDC }, Data: Write(writer =>
+            {
+                for (int i = 0; i < archiveNames.Count; i++)
+                {
+                    writer.Write((uint)i);
+                    writer.Write(456U + (uint)i);
+                }
+            }))
         };
 
         byte[] dat1;
@@ -76,6 +100,9 @@ internal static class TestFileFixtures
     public static (string Path, byte[] Dat1) CreateTocFixture() => CreateTocFixture(Path.GetTempFileName());
 
     public static string CreateTocFile(string path) => CreateTocFixture(path).Path;
+
+    public static string CreateTocFile(string path, IReadOnlyList<string> archiveNames)
+        => CreateTocFixture(path, archiveNames).Path;
 
     public static string CreateTocFile() => CreateTocFixture().Path;
 
