@@ -1,0 +1,35 @@
+{
+  "DisplayName": "Marvel's Spider-Man: Miles Morales",
+  "InternalId": "MM",
+  "Version": "1.0.0",
+  "ExecutableName": "SpiderManMM.exe",
+  "SupportedExecutables": [
+    "SpiderManMM.exe",
+    "Marvel's Spider-Man: Miles Morales.exe"
+  ],
+  "ArchiveDirectory": "asset_archive",
+  "TocFileName": "TOC",
+  "TocFormat": "ZlibDat1",
+  "HashFilePath": "asset_archive/hashes.txt",
+  "HashFormat": "KeyValue",
+  "CompressionFormats": ["Zlib"],
+  "UsesZlibCompression": true,
+  "UsesLz4Compression": false,
+  "UsesZstdCompression": false,
+  "SupportsHdTextures": true,
+  "HasDescriptionSection": true,
+  "IsInternalTarget": false,
+  "SectionTags": {
+    "ArchivesMap": "F0BF8A39",
+    "AssetIDs": "8A7B6D50",
+    "SizeEntries": "61F4BC65",
+    "Offsets": "B520D7DC"
+  },
+  "VersionFileNames": [
+    "app.info",
+    "version.txt",
+    "VERSION",
+    ".version"
+  ],
+  "SteamAppId": 1578370
+}

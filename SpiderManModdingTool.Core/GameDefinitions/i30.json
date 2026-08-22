@@ -1,0 +1,31 @@
+{
+  "DisplayName": "Internal Target i30",
+  "InternalId": "I30",
+  "Version": "1.0.0",
+  "ExecutableName": "i30_executable.exe",
+  "SupportedExecutables": [
+    "i30_executable.exe"
+  ],
+  "ArchiveDirectory": "asset_archive",
+  "TocFileName": "TOC",
+  "TocFormat": "ZlibDat1",
+  "HashFilePath": "asset_archive/hashes.txt",
+  "HashFormat": "KeyValue",
+  "CompressionFormats": ["Zlib"],
+  "UsesZlibCompression": true,
+  "UsesLz4Compression": false,
+  "UsesZstdCompression": false,
+  "SupportsHdTextures": false,
+  "HasDescriptionSection": false,
+  "IsInternalTarget": true,
+  "SectionTags": {
+    "ArchivesMap": "F0BF8A39",
+    "AssetIDs": "8A7B6D50",
+    "SizeEntries": "61F4BC65",
+    "Offsets": "B520D7DC"
+  },
+  "VersionFileNames": [
+    "version.txt"
+  ],
+  "SteamAppId": 0
+}

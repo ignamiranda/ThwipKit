@@ -1,0 +1,35 @@
+{
+  "DisplayName": "Ratchet & Clank: Rift Apart",
+  "InternalId": "RCRA",
+  "Version": "1.0.0",
+  "ExecutableName": "RatchetAndClankRiftApart.exe",
+  "SupportedExecutables": [
+    "RatchetAndClankRiftApart.exe",
+    "Ratchet & Clank: Rift Apart.exe"
+  ],
+  "ArchiveDirectory": "asset_archive",
+  "TocFileName": "TOC",
+  "TocFormat": "ZlibDat1",
+  "HashFilePath": "asset_archive/hashes.txt",
+  "HashFormat": "KeyValue",
+  "CompressionFormats": ["Zstd"],
+  "UsesZlibCompression": false,
+  "UsesLz4Compression": false,
+  "UsesZstdCompression": true,
+  "SupportsHdTextures": true,
+  "HasDescriptionSection": true,
+  "IsInternalTarget": false,
+  "SectionTags": {
+    "ArchivesMap": "F0BF8A39",
+    "AssetIDs": "8A7B6D50",
+    "SizeEntries": "61F4BC65",
+    "Offsets": "B520D7DC"
+  },
+  "VersionFileNames": [
+    "app.info",
+    "version.txt",
+    "VERSION",
+    ".version"
+  ],
+  "SteamAppId": 1234560
+}
