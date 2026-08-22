@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using SpiderManModdingTool.Core;
+using SpiderManModdingTool.Core.Assets;
 using SpiderManModdingTool.Core.Games;
 
 namespace SpiderManModdingTool.CLI
@@ -39,6 +40,8 @@ namespace SpiderManModdingTool.CLI
                         return 0;
                     case "list":
                         return HandleList(args.Skip(1).ToArray());
+                    case "assets":
+                        return HandleAssets(args.Skip(1).ToArray());
                     case "backup":
                         return HandleBackup(args.Skip(1).ToArray());
                     case "restore":
@@ -214,6 +217,210 @@ namespace SpiderManModdingTool.CLI
             }
             
             return 0;
+        }
+
+        static int HandleAssets(string[] args)
+        {
+            if (args.Length == 0)
+            {
+                ShowAssetsHelp();
+                return 1;
+            }
+
+            string command = args[0].ToLowerInvariant();
+            string[] commandArgs = args.Skip(1).ToArray();
+            if (!ValidateAssetsCommand(command, commandArgs)) return 1;
+
+            var resolved = ResolveGame();
+            if (resolved == null) return 1;
+            var (gamePath, game) = resolved.Value;
+            var browser = new AssetBrowser(game);
+
+            return command switch
+            {
+                "list" => HandleAssetsList(commandArgs, gamePath, browser),
+                "search" => HandleAssetsSearch(commandArgs, gamePath, browser),
+                "info" => HandleAssetsInfo(commandArgs, gamePath, browser),
+                "archives" => HandleAssetsArchives(commandArgs, gamePath, browser),
+                _ => 1
+            };
+        }
+
+        static bool ValidateAssetsCommand(string command, string[] args)
+        {
+            if (command == "list") return true;
+            if (command == "search" && args.Length == 1) return true;
+            if (command == "info" && args.Length == 1 && TryParseAssetId(args[0], out _)) return true;
+            if (command == "archives" && args.Length == 0) return true;
+
+            if (command is not ("list" or "search" or "info" or "archives"))
+            {
+                ShowUnknownAssetsCommand(command);
+            }
+            else
+            {
+                Console.Error.WriteLine($"Invalid arguments for assets {command}.");
+                ShowAssetsHelp();
+            }
+
+            return false;
+        }
+
+        static int HandleAssetsList(string[] args, string gamePath, AssetBrowser browser)
+        {
+            string? archive = null;
+            uint minSize = 0;
+            uint maxSize = uint.MaxValue;
+
+            for (int index = 0; index < args.Length; index++)
+            {
+                string option = args[index].ToLowerInvariant();
+                if (option == "--archive" && TryReadOption(args, ref index, out string? archiveValue))
+                {
+                    archive = archiveValue;
+                }
+                else if (option == "--min-size" && TryReadUIntOption(args, ref index, out uint minimum))
+                {
+                    minSize = minimum;
+                }
+                else if (option == "--max-size" && TryReadUIntOption(args, ref index, out uint maximum))
+                {
+                    maxSize = maximum;
+                }
+                else
+                {
+                    Console.Error.WriteLine($"Invalid or incomplete assets list option: {option}");
+                    return 1;
+                }
+            }
+
+            if (minSize > maxSize)
+            {
+                Console.Error.WriteLine("--min-size cannot be greater than --max-size.");
+                return 1;
+            }
+
+            IReadOnlyList<AssetInfo> assets = archive == null
+                ? browser.GetAllAssets(gamePath)
+                : browser.SearchByArchive(gamePath, archive);
+            WriteAssetTable(browser.FilterBySize(assets, minSize, maxSize));
+            return 0;
+        }
+
+        static int HandleAssetsSearch(string[] args, string gamePath, AssetBrowser browser)
+        {
+            if (args.Length != 1)
+            {
+                Console.Error.WriteLine("Usage: smtcli assets search <pattern>");
+                return 1;
+            }
+
+            WriteAssetTable(browser.SearchByName(gamePath, args[0]));
+            return 0;
+        }
+
+        static int HandleAssetsInfo(string[] args, string gamePath, AssetBrowser browser)
+        {
+            if (args.Length != 1 || !TryParseAssetId(args.FirstOrDefault(), out ulong assetId))
+            {
+                Console.Error.WriteLine("Usage: smtcli assets info <asset-id> (hex 0x... or decimal)");
+                return 1;
+            }
+
+            AssetInfo? asset = browser.GetAsset(gamePath, assetId);
+            if (asset == null)
+            {
+                Console.Error.WriteLine($"Asset 0x{assetId:X16} was not found.");
+                return 1;
+            }
+
+            Console.WriteLine($"Asset ID:      {asset.AssetIdHex}");
+            Console.WriteLine($"Name:          {asset.ResolvedName ?? string.Empty}");
+            Console.WriteLine($"Size:          {asset.Size} bytes");
+            Console.WriteLine($"Offset:        {asset.Offset}");
+            Console.WriteLine($"Archive:       {asset.ArchiveName}");
+            Console.WriteLine($"Archive Index: {asset.ArchiveIndex}");
+            return 0;
+        }
+
+        static int HandleAssetsArchives(string[] args, string gamePath, AssetBrowser browser)
+        {
+            if (args.Length != 0)
+            {
+                Console.Error.WriteLine("Usage: smtcli assets archives");
+                return 1;
+            }
+
+            IReadOnlyList<AssetInfo> assets = browser.GetAllAssets(gamePath);
+            foreach (var archive in assets
+                .Where(asset => !string.IsNullOrWhiteSpace(asset.ArchiveName))
+                .GroupBy(asset => asset.ArchiveName, StringComparer.OrdinalIgnoreCase)
+                .OrderBy(group => group.Key, StringComparer.OrdinalIgnoreCase))
+            {
+                Console.WriteLine($"{archive.Key}: {archive.Count()} asset(s)");
+            }
+
+            return 0;
+        }
+
+        static void WriteAssetTable(IEnumerable<AssetInfo> assets)
+        {
+            const int idWidth = 18;
+            const int nameWidth = 44;
+            const int sizeWidth = 12;
+            Console.WriteLine($"{"Asset ID".PadRight(idWidth)} {"Name".PadRight(nameWidth)} {"Size".PadLeft(sizeWidth)} Archive");
+            Console.WriteLine(new string('-', idWidth + nameWidth + sizeWidth + 3 + 20));
+
+            foreach (AssetInfo asset in assets)
+            {
+                string name = asset.ResolvedName ?? string.Empty;
+                if (name.Length > nameWidth) name = name[..(nameWidth - 3)] + "...";
+                Console.WriteLine($"{asset.AssetIdHex.PadRight(idWidth)} {name.PadRight(nameWidth)} {asset.Size.ToString().PadLeft(sizeWidth)} {asset.ArchiveName}");
+            }
+        }
+
+        static bool TryReadOption(string[] args, ref int index, out string? value)
+        {
+            value = index + 1 < args.Length ? args[index + 1] : null;
+            if (string.IsNullOrWhiteSpace(value) || value.StartsWith("--", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            index++;
+            return true;
+        }
+
+        static bool TryReadUIntOption(string[] args, ref int index, out uint value)
+        {
+            value = 0;
+            return TryReadOption(args, ref index, out string? raw) && uint.TryParse(raw, out value);
+        }
+
+        static bool TryParseAssetId(string? value, out ulong assetId)
+        {
+            assetId = 0;
+            if (string.IsNullOrWhiteSpace(value)) return false;
+
+            return value.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
+                ? ulong.TryParse(value[2..], System.Globalization.NumberStyles.HexNumber, null, out assetId)
+                : ulong.TryParse(value, out assetId);
+        }
+
+        static int ShowUnknownAssetsCommand(string command)
+        {
+            Console.Error.WriteLine($"Unknown assets command: {command}");
+            ShowAssetsHelp();
+            return 1;
+        }
+
+        static void ShowAssetsHelp()
+        {
+            Console.WriteLine("Asset commands:");
+            Console.WriteLine("  smtcli assets list [--archive <name>] [--min-size <bytes>] [--max-size <bytes>]");
+            Console.WriteLine("  smtcli assets search <pattern>");
+            Console.WriteLine("  smtcli assets info <asset-id>");
+            Console.WriteLine("  smtcli assets archives");
         }
 
         static int HandleBackup(string[] args)
@@ -514,6 +721,11 @@ namespace SpiderManModdingTool.CLI
             Console.WriteLine("  extract <texture-name> <output-png>     Extract texture to PNG file");
             Console.WriteLine("  rebuild <input-png> <texture-name>      Rebuild texture from PNG file (--no-backup to skip backup)");
             Console.WriteLine("  list <texture-name>                     List textures matching name");
+            Console.WriteLine("  assets list [options]                   List assets with metadata");
+            Console.WriteLine("  assets search <pattern>                 Search assets by name or ID");
+            Console.WriteLine("  assets info <asset-id>                  Show full asset metadata");
+            Console.WriteLine("  assets archives                         List archives with asset counts");
+            Console.WriteLine("    options: --archive <name> --min-size <bytes> --max-size <bytes>");
             Console.WriteLine("  backup list [texture-name]              List backups (for texture or all)");
             Console.WriteLine("  backup create <texture-name>            Create manual backup of texture");
             Console.WriteLine("  restore <texture-name>                  Restore texture from most recent backup");
