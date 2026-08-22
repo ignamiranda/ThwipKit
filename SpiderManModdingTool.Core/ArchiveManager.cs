@@ -238,6 +238,10 @@ namespace SpiderManModdingTool.Core
                         {
                             throw new NotSupportedException($"Compression format '{format}' declared in DSAR block is not implemented.");
                         }
+                        if (format != CompressionFormat.None && !_game.CompressionFormats.Contains(format))
+                        {
+                            throw new NotSupportedException($"DSAR block declares compression '{format}' which is not supported by game profile '{_game.InternalId}'.");
+                        }
                         
                         byte[] decompressedBlock;
                         if (format == CompressionFormat.Lz4)

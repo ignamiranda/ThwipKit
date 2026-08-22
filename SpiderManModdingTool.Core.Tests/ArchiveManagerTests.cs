@@ -1,6 +1,4 @@
-using System;
 using System.IO;
-using System.IO.Compression;
 using SpiderManModdingTool.Core;
 using SpiderManModdingTool.Core.GameDefinitions;
 using SpiderManModdingTool.Core.Games;
@@ -25,8 +23,8 @@ public class ArchiveManagerTests : IDisposable
         _archivePath = Path.Combine(_assetArchivePath, "Archive0");
         
         Directory.CreateDirectory(_assetArchivePath);
-        CreateTocFile();
-        CreateDsarFile();
+        TestFileFixtures.CreateTocFile(_tocPath);
+        TestFileFixtures.CreateDsarFile(_archivePath);
     }
 
     public void Dispose()
@@ -49,7 +47,8 @@ public class ArchiveManagerTests : IDisposable
             ExecutableName = "Spider-Man Remastered.exe",
             ArchiveDirectory = "asset_archive",
             TocFileName = "TOC",
-            TocFormat = "ZlibDat1",
+            TocFormat = TocFormat.ZlibDat1,
+            CompressionFormats = [CompressionFormat.Lz4],
             SectionTags = new Dictionary<string, string>
             {
                 ["ArchivesMap"] = "F0BF8A39",
@@ -105,95 +104,5 @@ public class ArchiveManagerTests : IDisposable
         bool result = manager.RestoreTextureFromBackup(_gamePath, "0x1122334455667788");
         
         Assert.True(result);
-    }
-
-    private void CreateTocFile()
-    {
-        var sections = new[]
-        {
-            (Tag: new byte[] { 0xF0, 0xBF, 0x8A, 0x39 }, Data: CreateArchiveEntry("Archive0")),
-            (Tag: new byte[] { 0x8A, 0x7B, 0x6D, 0x50 }, Data: Write(writer => writer.Write(0x1122334455667788UL))),
-            (Tag: new byte[] { 0x61, 0xF4, 0xBC, 0x65 }, Data: Write(writer => { writer.Write(1U); writer.Write(123U); writer.Write(0U); })),
-            (Tag: new byte[] { 0xB5, 0x20, 0xD7, 0xDC }, Data: Write(writer => { writer.Write(0U); writer.Write(456U); }))
-        };
-
-        byte[] dat1;
-        using (var stream = new MemoryStream())
-        using (var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, true))
-        {
-            int headerLength = 16 + (sections.Length * 12) + "ArchiveTOC".Length + 1;
-            int dataOffset = (headerLength + 15) & ~15;
-            writer.Write(new byte[] { 0x31, 0x54, 0x41, 0x44 });
-            writer.Write(0U);
-            writer.Write((uint)(dataOffset + sections.Sum(section => section.Data.Length)));
-            writer.Write((ushort)sections.Length);
-            writer.Write((ushort)0);
-            int offset = dataOffset;
-            foreach (var section in sections)
-            {
-                writer.Write(section.Tag);
-                writer.Write((uint)offset);
-                writer.Write((uint)section.Data.Length);
-                offset += section.Data.Length;
-            }
-            writer.Write(System.Text.Encoding.ASCII.GetBytes("ArchiveTOC"));
-            writer.Write((byte)0);
-            writer.Write(new byte[dataOffset - stream.Position]);
-            foreach (var section in sections)
-            {
-                writer.Write(section.Data);
-            }
-            dat1 = stream.ToArray();
-        }
-
-        using var file = File.Create(_tocPath);
-        using var outerWriter = new BinaryWriter(file, System.Text.Encoding.UTF8, true);
-        outerWriter.Write(new byte[] { 0xAF, 0x12, 0xAF, 0x77 });
-        outerWriter.Write((uint)dat1.Length);
-        using var zlib = new ZLibStream(file, CompressionLevel.SmallestSize, true);
-        zlib.Write(dat1);
-    }
-
-    private void CreateDsarFile()
-    {
-        using var file = File.Create(_archivePath);
-        using var writer = new BinaryWriter(file, System.Text.Encoding.UTF8, true);
-        writer.Write(new byte[] { (byte)'D', (byte)'S', (byte)'A', (byte)'R' });
-        writer.Write(1U);
-        writer.Write(1U);
-        writer.Write(0U);
-        writer.Write(0UL);
-        writer.Write(new byte[8]);
-        
-        writer.Write(0U);
-        writer.Write(0U);
-        writer.Write(0U);
-        writer.Write(0U);
-        writer.Write(123U);
-        writer.Write(100U);
-        writer.Write((byte)3);
-        writer.Write(new byte[7]);
-        
-        writer.Write(new byte[100]);
-    }
-
-    private static byte[] CreateArchiveEntry(string name)
-    {
-        return Write(writer =>
-        {
-            writer.Write(1U);
-            writer.Write(2U);
-            byte[] nameBytes = new byte[64];
-            System.Text.Encoding.ASCII.GetBytes(name).CopyTo(nameBytes, 0);
-            writer.Write(nameBytes);
-        });
-    }
-
-    private static byte[] Write(Action<BinaryWriter> action)
-    {
-        using var stream = new MemoryStream();
-        using var writer = new BinaryWriter(stream);
-        action(writer);
-        return stream.ToArray();
     }
 }

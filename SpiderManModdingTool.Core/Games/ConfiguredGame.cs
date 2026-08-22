@@ -17,7 +17,7 @@ public class ConfiguredGame : GameBase
 
     public override TocData ParseToc(string tocPath)
     {
-        if (!string.Equals(Definition.TocFormat, "ZlibDat1", StringComparison.OrdinalIgnoreCase))
+        if (Definition.TocFormat != TocFormat.ZlibDat1)
         {
             throw new NotSupportedException($"TOC format '{Definition.TocFormat}' is not supported.");
         }
@@ -29,7 +29,7 @@ public class ConfiguredGame : GameBase
 
     public override IReadOnlyDictionary<string, string> LoadHashTable(string gamePath)
     {
-        if (!string.Equals(Definition.HashFormat, "KeyValue", StringComparison.OrdinalIgnoreCase))
+        if (Definition.HashFormat != HashFormat.KeyValue)
         {
             throw new NotSupportedException($"Hash format '{Definition.HashFormat}' is not supported.");
         }

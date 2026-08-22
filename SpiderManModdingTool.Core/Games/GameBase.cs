@@ -44,9 +44,6 @@ public abstract class GameBase
     {
         var behaviors = new Dictionary<string, bool>(Definition.Capabilities, StringComparer.OrdinalIgnoreCase)
         {
-            ["UsesZlibCompression"] = CompressionFormats.Contains(CompressionFormat.Zlib),
-            ["UsesLz4Compression"] = CompressionFormats.Contains(CompressionFormat.Lz4),
-            ["UsesZstdCompression"] = CompressionFormats.Contains(CompressionFormat.Zstd),
             ["CompressionImplemented"] = IsCompressionImplemented,
             ["SupportsHdTextures"] = Definition.SupportsHdTextures,
             ["HasDescriptionSection"] = Definition.HasDescriptionSection
