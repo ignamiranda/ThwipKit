@@ -4,14 +4,16 @@
         Title="Spider-Man Modding Tool" Height="720" Width="1200" MinHeight="480" MinWidth="800">
     <DockPanel>
         <Menu DockPanel.Dock="Top">
-            <MenuItem Header="_File" />
+            <MenuItem Header="_File">
+                <MenuItem Header="_Open Game Directory..." Click="OpenGameDirectory_Click" />
+            </MenuItem>
             <MenuItem Header="_Edit" />
             <MenuItem Header="_View" />
             <MenuItem Header="_Help" />
         </Menu>
         <StatusBar DockPanel.Dock="Bottom">
             <StatusBarItem>
-                <TextBlock Text="{Binding GamePath, TargetNullValue=No game selected}" />
+                <TextBlock Text="{Binding GamePath}" />
             </StatusBarItem>
             <Separator />
             <StatusBarItem>

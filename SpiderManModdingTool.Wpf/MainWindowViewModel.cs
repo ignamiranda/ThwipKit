@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows.Input;
 using SpiderManModdingTool.Core.Assets;
 using SpiderManModdingTool.Core.Games;
@@ -44,9 +45,17 @@ public sealed class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        GameBase game = GameFactory.CreateGameFromPath(gamePath);
-        GamePath = gamePath;
-        AssetCount = new AssetBrowser(game).GetAssetCount(gamePath);
-        StatusMessage = $"Detected {game.DisplayName}.";
+        try
+        {
+            GameBase game = GameFactory.CreateGameFromPath(gamePath);
+            int assetCount = new AssetBrowser(game).GetAssetCount(gamePath);
+            GamePath = gamePath;
+            AssetCount = assetCount;
+            StatusMessage = $"Detected {game.DisplayName}.";
+        }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException or UnauthorizedAccessException)
+        {
+            StatusMessage = $"Could not load game: {ex.Message}";
+        }
     }
 }
