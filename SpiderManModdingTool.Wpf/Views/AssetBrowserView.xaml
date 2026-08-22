@@ -1,0 +1,78 @@
+<UserControl x:Class="SpiderManModdingTool.Wpf.Views.AssetBrowserView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="clr-namespace:SpiderManModdingTool.Wpf.Converters">
+    <UserControl.Resources>
+        <converters:ByteSizeConverter x:Key="ByteSizeConverter" />
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    </UserControl.Resources>
+    <Grid Background="#FF101317">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="220" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="290" />
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.ColumnSpan="3" Padding="14,10" Background="#FF191E24" BorderBrush="#FF323A44" BorderThickness="0,0,0,1">
+            <DockPanel LastChildFill="True">
+                <Button DockPanel.Dock="Right" Margin="8,0,0,0" Padding="14,6" Content="Clear" Command="{Binding ClearFiltersCommand}" />
+                <ComboBox DockPanel.Dock="Right" Width="190" Margin="8,0,0,0" ItemsSource="{Binding ArchiveNames}"
+                          SelectedItem="{Binding SelectedArchive}" ToolTip="Archive filter" />
+                <TextBox Padding="10,6" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" ToolTip="Search names or hexadecimal IDs" />
+            </DockPanel>
+        </Border>
+
+        <Border Grid.Row="1" Padding="12" Background="#FF15191E" BorderBrush="#FF323A44" BorderThickness="0,0,1,0">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Margin="4,0,0,10" Foreground="#FF83D5FF" FontWeight="SemiBold" Text="ARCHIVES" />
+                <TreeView ItemsSource="{Binding ArchiveTree}" Background="Transparent" Foreground="#FFE7EDF3"
+                          SelectedItemChanged="ArchiveTree_SelectedItemChanged">
+                    <TreeView.ItemTemplate>
+                        <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                            <TextBlock Text="{Binding Name}" />
+                        </HierarchicalDataTemplate>
+                    </TreeView.ItemTemplate>
+                </TreeView>
+            </DockPanel>
+        </Border>
+
+        <DataGrid Grid.Row="1" Grid.Column="1" ItemsSource="{Binding AssetsView}" SelectedItem="{Binding SelectedAsset}"
+                  AutoGenerateColumns="False" IsReadOnly="True" CanUserSortColumns="True" EnableRowVirtualization="True"
+                  EnableColumnVirtualization="True" VirtualizingPanel.IsVirtualizing="True"
+                  VirtualizingPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True"
+                  HeadersVisibility="Column" GridLinesVisibility="Horizontal">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Asset ID" Binding="{Binding AssetIdHex}" Width="170" />
+                <DataGridTextColumn Header="Resolved Name" Binding="{Binding ResolvedName}" Width="*" />
+                <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource ByteSizeConverter}}" Width="100" />
+                <DataGridTextColumn Header="Archive" Binding="{Binding ArchiveName}" Width="180" />
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <Border Grid.Row="1" Grid.Column="2" Padding="18" Background="#FF191E24" BorderBrush="#FF323A44" BorderThickness="1,0,0,0">
+            <StackPanel DataContext="{Binding SelectedAsset}">
+                <TextBlock Margin="0,0,0,16" Foreground="#FF83D5FF" FontWeight="SemiBold" Text="ASSET DETAIL" />
+                <TextBlock Foreground="#FF8C98A5" Text="Asset ID" />
+                <TextBlock Margin="0,2,0,14" Foreground="#FFF1F5F8" FontFamily="Consolas" Text="{Binding AssetIdHex}" />
+                <TextBlock Foreground="#FF8C98A5" Text="Resolved name" />
+                <TextBlock Margin="0,2,0,14" Foreground="#FFF1F5F8" Text="{Binding ResolvedName, TargetNullValue=[unresolved]}" TextWrapping="Wrap" />
+                <TextBlock Foreground="#FF8C98A5" Text="Size (bytes)" />
+                <TextBlock Margin="0,2,0,14" Foreground="#FFF1F5F8" Text="{Binding Size, StringFormat={}{0:N0}}" />
+                <TextBlock Foreground="#FF8C98A5" Text="Archive offset" />
+                <TextBlock Margin="0,2,0,14" Foreground="#FFF1F5F8" Text="{Binding Offset, StringFormat=0x{0:X8}}" />
+                <TextBlock Foreground="#FF8C98A5" Text="Archive" />
+                <TextBlock Margin="0,2,0,14" Foreground="#FFF1F5F8" Text="{Binding ArchiveName}" />
+                <TextBlock Foreground="#FF8C98A5" Text="Archive index" />
+                <TextBlock Margin="0,2,0,14" Foreground="#FFF1F5F8" Text="{Binding ArchiveIndex}" />
+            </StackPanel>
+        </Border>
+
+        <Border Grid.RowSpan="2" Grid.ColumnSpan="3" Background="#99000000" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White" FontSize="18" Text="Loading asset catalog..." />
+        </Border>
+    </Grid>
+</UserControl>
