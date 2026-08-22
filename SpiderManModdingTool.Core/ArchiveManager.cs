@@ -11,14 +11,22 @@ using SpiderManModdingTool.Core.Sections;
 namespace SpiderManModdingTool.Core
 {
     /// <summary>
-    /// Handles reading and writing to Spider-Man Remastered archive files
+    /// Handles reading and writing to Spider-Man archive files using a game profile
     /// </summary>
     public class ArchiveManager
     {
+        private readonly GameBase _game;
+
         // Backup configuration properties
-        private string _backupDirectoryRelativePath = @"asset_archive\backups";
+        private string _backupDirectoryRelativePath;
         private bool _enableBackups = true;
         private int _maxBackupFiles = 10;
+
+        public ArchiveManager(GameBase game)
+        {
+            _game = game ?? throw new ArgumentNullException(nameof(game));
+            _backupDirectoryRelativePath = Path.Combine(game.ArchiveDirectory, "backups");
+        }
 
         /// <summary>
         /// Gets or sets the relative path for backup directory (relative to game path)
@@ -26,7 +34,7 @@ namespace SpiderManModdingTool.Core
         public string BackupDirectoryRelativePath
         {
             get => _backupDirectoryRelativePath;
-            set => _backupDirectoryRelativePath = value ?? @"asset_archive\backups";
+            set => _backupDirectoryRelativePath = value ?? Path.Combine(_game.ArchiveDirectory, "backups");
         }
 
         /// <summary>
@@ -47,15 +55,6 @@ namespace SpiderManModdingTool.Core
             set => _maxBackupFiles = Math.Max(0, value);
         }
 
-        private static readonly IReadOnlyDictionary<string, string> MsmrSectionTags =
-            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["ArchivesMap"] = "F0BF8A39",
-                ["AssetIDs"] = "8A7B6D50",
-                ["SizeEntries"] = "61F4BC65",
-                ["Offsets"] = "B520D7DC"
-            };
-
         private class DsarBlockHeader
         {
             public uint RealOffset { get; set; }
@@ -72,7 +71,7 @@ namespace SpiderManModdingTool.Core
         /// <returns>List of texture names</returns>
         public List<string> GetTextureNames(string gamePath)
         {
-            string tocPath = Path.Combine(gamePath, "asset_archive", "TOC");
+            string tocPath = GetTocPath(gamePath);
             
             if (!File.Exists(tocPath))
             {
@@ -102,10 +101,22 @@ namespace SpiderManModdingTool.Core
             }
         }
 
-        private static TocData ParseToc(string tocPath)
+        private TocData ParseToc(string tocPath)
         {
-            return TocParser.Parse(tocPath, MsmrSectionTags);
+            return _game.ParseToc(tocPath);
         }
+
+        private string GetTocPath(string gamePath) => Path.Combine(gamePath, _game.ArchiveDirectory, _game.TocFileName);
+
+        private string GetArchiveFilePath(string gamePath, string archiveName) => Path.Combine(gamePath, _game.ArchiveDirectory, archiveName);
+
+        private static CompressionFormat ResolveDsarCompressionType(byte compressionType) => compressionType switch
+        {
+            0 => CompressionFormat.None,
+            2 => CompressionFormat.GDeflate,
+            3 => CompressionFormat.Lz4,
+            _ => throw new NotSupportedException($"Unknown DSAR compression type: {compressionType}")
+        };
 
         private static bool TryResolveTexture(TocData toc, string textureName, out uint textureOffset, out int textureSize, out string archiveName)
         {
@@ -146,7 +157,7 @@ namespace SpiderManModdingTool.Core
         /// </summary>
         public bool ExtractTextureToPng(string gamePath, string textureName, string outputPngPath)
         {
-            string tocPath = Path.Combine(gamePath, "asset_archive", "TOC");
+            string tocPath = GetTocPath(gamePath);
             
             try
             {
@@ -157,7 +168,7 @@ namespace SpiderManModdingTool.Core
                     throw new FileNotFoundException($"Texture '{textureName}' not found in game archives");
                 }
 
-                string archiveFilePath = Path.Combine(gamePath, "asset_archive", archiveName);
+                string archiveFilePath = GetArchiveFilePath(gamePath, archiveName);
                 byte[] textureData = ReadFromDsar(archiveFilePath, textureOffset, (uint)textureSize);
                 
                 bool conversionSuccessful = SimulateTextureToPngConversion(textureData, outputPngPath);
@@ -221,20 +232,26 @@ namespace SpiderManModdingTool.Core
                     {
                         fs.Seek(block.CompressedOffset, SeekOrigin.Begin);
                         byte[] compressedBlock = reader.ReadBytes((int)block.CompressedSize);
-                        byte[] decompressedBlock;
                         
-                        if (block.CompressionType == 3)
+                        CompressionFormat format = ResolveDsarCompressionType(block.CompressionType);
+                        if (!CompressionSupport.IsImplemented(format))
+                        {
+                            throw new NotSupportedException($"Compression format '{format}' declared in DSAR block is not implemented.");
+                        }
+                        
+                        byte[] decompressedBlock;
+                        if (format == CompressionFormat.Lz4)
                         {
                             decompressedBlock = new byte[block.RealSize];
                             K4os.Compression.LZ4.LZ4Codec.Decode(compressedBlock, decompressedBlock);
                         }
-                        else if (block.CompressionType == 2)
+                        else if (format == CompressionFormat.None)
                         {
-                            throw new NotSupportedException("GDeflate compression not supported");
+                            decompressedBlock = compressedBlock;
                         }
                         else
                         {
-                            throw new NotSupportedException($"Unknown compression type: {block.CompressionType}");
+                            throw new NotSupportedException($"Compression format '{format}' is recognized but has no decoder.");
                         }
                         
                         uint assetStartInBlock = (uint)Math.Max(0, (long)offset - (long)blockStart);
@@ -345,7 +362,7 @@ namespace SpiderManModdingTool.Core
         /// </summary>
         public bool RebuildTextureFromPng(string gamePath, string textureName, string inputPngPath, bool createBackup = true)
         {
-            string tocPath = Path.Combine(gamePath, "asset_archive", "TOC");
+            string tocPath = GetTocPath(gamePath);
             
             try
             {
@@ -361,7 +378,7 @@ namespace SpiderManModdingTool.Core
                     throw new FileNotFoundException($"Texture '{textureName}' not found in game archives");
                 }
 
-                string archiveFilePath = Path.Combine(gamePath, "asset_archive", archiveName);
+                string archiveFilePath = GetArchiveFilePath(gamePath, archiveName);
 
                 if (createBackup && _enableBackups)
                 {
@@ -530,7 +547,7 @@ namespace SpiderManModdingTool.Core
                     return false;
                 }
 
-                string tocPath = Path.Combine(gamePath, "asset_archive", "TOC");
+                string tocPath = GetTocPath(gamePath);
                 TocData toc = ParseToc(tocPath);
 
                 if (!TryResolveTexture(toc, textureName, out uint textureOffset, out int textureSize, out string archiveName))
@@ -543,7 +560,7 @@ namespace SpiderManModdingTool.Core
                     return false;
                 }
 
-                string archiveFilePath = Path.Combine(gamePath, "asset_archive", archiveName);
+                string archiveFilePath = GetArchiveFilePath(gamePath, archiveName);
                 WriteToDsar(archiveFilePath, textureOffset, (uint)textureSize, backupData);
 
                 return true;

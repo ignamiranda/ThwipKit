@@ -5,6 +5,7 @@ using System.IO;
 using System.Text;
 using System.Windows.Forms;
 using SpiderManModdingTool.Core;
+using SpiderManModdingTool.Core.Games;
 
 namespace SpiderManModdingTool
 {
@@ -17,7 +18,9 @@ namespace SpiderManModdingTool
         // Full list of texture names (filtered for display)
         private List<string> _allTextureNames = new List<string>();
         // Archive manager for handling game archive operations
-        private readonly ArchiveManager _archiveManager = new ArchiveManager();
+        private ArchiveManager? _archiveManager;
+        // Resolved game profile
+        private GameBase? _game;
         // Game version detector
         private readonly GameVersionDetector _versionDetector = new GameVersionDetector();
         private GameVersionInfo? _gameVersion;
@@ -40,10 +43,6 @@ namespace SpiderManModdingTool
 
         private void ApplySettings()
         {
-            _archiveManager.EnableBackups = _settings.EnableBackups;
-            _archiveManager.MaxBackupFiles = _settings.MaxBackupFiles;
-            _archiveManager.BackupDirectoryRelativePath = _settings.BackupDirectory;
-
             checkBoxEnableBackups.Checked = _settings.EnableBackups;
             numericUpDownMaxBackups.Value = _settings.MaxBackupFiles;
             textBoxBackupDirectory.Text = _settings.BackupDirectory;
@@ -72,12 +71,32 @@ namespace SpiderManModdingTool
             }
         }
 
+        private bool EnsureArchiveManager(string gamePath)
+        {
+            if (_archiveManager != null) return true;
+            try
+            {
+                _game = GameFactory.CreateGameFromPath(gamePath);
+                _archiveManager = new ArchiveManager(_game);
+                _archiveManager.EnableBackups = _settings.EnableBackups;
+                _archiveManager.MaxBackupFiles = _settings.MaxBackupFiles;
+                _archiveManager.BackupDirectoryRelativePath = _settings.BackupDirectory;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Could not determine game profile: {ex.Message}", "Game Profile Error",
+                               MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+        }
+
         private void SaveSettings()
         {
             _settings.GamePath = textBoxGamePath.Text.Trim();
-            _settings.EnableBackups = _archiveManager.EnableBackups;
-            _settings.MaxBackupFiles = _archiveManager.MaxBackupFiles;
-            _settings.BackupDirectory = _archiveManager.BackupDirectoryRelativePath;
+            _settings.EnableBackups = checkBoxEnableBackups.Checked;
+            _settings.MaxBackupFiles = (int)numericUpDownMaxBackups.Value;
+            _settings.BackupDirectory = textBoxBackupDirectory.Text.Trim();
 
             if (this.WindowState == FormWindowState.Normal)
             {
@@ -180,22 +199,26 @@ namespace SpiderManModdingTool
 
             foreach (string path in commonPaths)
             {
-                if (Directory.Exists(path) && File.Exists(Path.Combine(path, "asset_archive", "TOC")))
+                if (!Directory.Exists(path)) continue;
+                try
                 {
+                    GameFactory.CreateGameFromPath(path);
                     textBoxGamePath.Text = path;
                     DetectGameVersion(path);
                     ScanForTextures();
                     return;
                 }
+                catch { }
             }
 
-            MessageBox.Show("Could not auto-detect Spider-Man Remastered installation. Please browse to the game folder manually.",
+            MessageBox.Show("Could not auto-detect a supported game installation. Please browse to the game folder manually.",
                            "Detection Failed", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void DetectGameVersion(string gamePath)
         {
-            _gameVersion = _versionDetector.DetectVersion(gamePath);
+            if (!EnsureArchiveManager(gamePath)) return;
+            _gameVersion = _versionDetector.DetectVersion(gamePath, _game!);
             UpdateVersionDisplay();
         }
 
@@ -231,7 +254,9 @@ private void ScanForTextures()
                 return;
             }
 
-            string tocPath = Path.Combine(gamePath, "asset_archive", "TOC");
+            if (!EnsureArchiveManager(gamePath)) return;
+
+            string tocPath = Path.Combine(gamePath, _game!.ArchiveDirectory, _game.TocFileName);
             if (!File.Exists(tocPath))
             {
                 var error = ErrorHandler.InvalidGamePath(gamePath);
@@ -247,7 +272,7 @@ private void ScanForTextures()
                 progressBarScan.Visible = true;
                 Application.DoEvents();
 
-                _allTextureNames = _archiveManager.GetTextureNames(gamePath);
+                _allTextureNames = _archiveManager!.GetTextureNames(gamePath);
                 Logger.LogInfo($"Found {_allTextureNames.Count} textures");
                 UpdateWorkflowStatus($"Found {_allTextureNames.Count} textures - type to search");
 
@@ -352,7 +377,7 @@ private void ScanForTextures()
 
         private void ExtractTextureToPng(string gamePath, string textureFileName, string outputDirectory)
         {
-            string tocPath = Path.Combine(gamePath, "asset_archive", "TOC");
+            string tocPath = Path.Combine(gamePath, _game!.ArchiveDirectory, _game!.TocFileName);
             
             try
             {
@@ -420,7 +445,7 @@ private void ScanForTextures()
                 string tempTexturePath = Path.Combine(Path.GetTempPath(), textureFileName);
                 
                 using (FileStream sourceStream = new FileStream(
-                           Path.Combine(gamePath, "asset_archive", textureFileName.Substring(0, textureFileName.Length - 8) + ".g00s000"), 
+                           Path.Combine(gamePath, _game!.ArchiveDirectory, textureFileName.Substring(0, textureFileName.Length - 8) + ".g00s000"), 
                            FileMode.Open, FileAccess.Read))
                 {
                     // Actually, we need to read from the correct archive file based on the offset
@@ -571,7 +596,7 @@ private void RebuildTextureFromPng(string gamePath, string textureFileName, stri
                 progressBarScan.Visible = true;
                 Application.DoEvents();
 
-                bool success = _archiveManager.RebuildTextureFromPng(gamePath,
+                bool success = _archiveManager!.RebuildTextureFromPng(gamePath,
                     Path.GetFileNameWithoutExtension(textureFileName), pngFilePath);
 
                 if (success)
@@ -628,7 +653,7 @@ private void RebuildTextureFromPng(string gamePath, string textureFileName, stri
 
         private void ExtractTextureToPng(string gamePath, string textureFileName)
         {
-            string tocPath = Path.Combine(gamePath, "asset_archive", "TOC");
+            string tocPath = Path.Combine(gamePath, _game!.ArchiveDirectory, _game!.TocFileName);
             
             try
             {
@@ -693,7 +718,7 @@ private void RebuildTextureFromPng(string gamePath, string textureFileName, stri
                 }
 
                 // Read the texture data
-                string archiveFilePath = Path.Combine(gamePath, "asset_archive", 
+                string archiveFilePath = Path.Combine(gamePath, _game!.ArchiveDirectory, 
                     textureFileName.Substring(0, textureFileName.Length - 8) + ".g00s000");
                 
                 byte[] textureData = new byte[textureSize];
@@ -905,12 +930,16 @@ private void RebuildTextureFromPng(string gamePath, string textureFileName, stri
         // Backup system event handlers
         private void checkBoxEnableBackups_CheckedChanged(object sender, EventArgs e)
         {
-            _archiveManager.EnableBackups = checkBoxEnableBackups.Checked;
+            _settings.EnableBackups = checkBoxEnableBackups.Checked;
+            if (_archiveManager != null)
+                _archiveManager.EnableBackups = checkBoxEnableBackups.Checked;
         }
 
         private void numericUpDownMaxBackups_ValueChanged(object sender, EventArgs e)
         {
-            _archiveManager.MaxBackupFiles = (int)numericUpDownMaxBackups.Value;
+            _settings.MaxBackupFiles = (int)numericUpDownMaxBackups.Value;
+            if (_archiveManager != null)
+                _archiveManager.MaxBackupFiles = (int)numericUpDownMaxBackups.Value;
         }
 
         private void buttonBrowseBackupDir_Click(object sender, EventArgs e)
@@ -923,10 +952,13 @@ private void RebuildTextureFromPng(string gamePath, string textureFileName, stri
                 if (folderDialog.ShowDialog() == DialogResult.OK)
                 {
                     textBoxBackupDirectory.Text = folderDialog.SelectedPath;
-                    _archiveManager.BackupDirectoryRelativePath = folderDialog.SelectedPath.Substring(
+                    string dirName = folderDialog.SelectedPath.Substring(
                         folderDialog.SelectedPath.EndsWith("\\") 
                         ? folderDialog.SelectedPath.Length - 1 
                         : folderDialog.SelectedPath.LastIndexOf('\\') + 1);
+                    _settings.BackupDirectory = dirName;
+                    if (_archiveManager != null)
+                        _archiveManager.BackupDirectoryRelativePath = dirName;
                 }
             }
         }
@@ -953,7 +985,7 @@ private void RebuildTextureFromPng(string gamePath, string textureFileName, stri
             try
             {
                 // Create a backup of the selected texture
-                string tocPath = Path.Combine(gamePath, "asset_archive", "TOC");
+                string tocPath = Path.Combine(gamePath, _game!.ArchiveDirectory, _game!.TocFileName);
                 
                 // Find the texture entry in TOC to get offset and size
                 long textureOffset = -1;
@@ -1030,7 +1062,7 @@ private void RebuildTextureFromPng(string gamePath, string textureFileName, stri
                 }
 
                 // Create backup
-                string backupDirectory = Path.Combine(gamePath, _archiveManager.BackupDirectoryRelativePath);
+                string backupDirectory = Path.Combine(gamePath, _archiveManager!.BackupDirectoryRelativePath);
                 if (!Directory.Exists(backupDirectory))
                 {
                     Directory.CreateDirectory(backupDirectory);
@@ -1069,7 +1101,7 @@ private void RebuildTextureFromPng(string gamePath, string textureFileName, stri
                 File.WriteAllBytes(backupFilePath, textureData);
                 
                 // Enforce retention policy
-                _archiveManager.EnforceBackupRetentionPolicy(backupDirectory, selectedTextureName);
+                _archiveManager!.EnforceBackupRetentionPolicy(backupDirectory, selectedTextureName);
                 
                 // Refresh backup list
                 RefreshBackupList(gamePath, selectedTextureName);
@@ -1130,7 +1162,7 @@ private void RebuildTextureFromPng(string gamePath, string textureFileName, stri
                     }
 
                     // Find the texture entry in TOC to get offset and size
-                    string tocPath = Path.Combine(gamePath, "asset_archive", "TOC");
+                    string tocPath = Path.Combine(gamePath, _game!.ArchiveDirectory, _game!.TocFileName);
                     long textureOffset = -1;
                     int textureSize = 0;
 
@@ -1217,6 +1249,7 @@ private void RebuildTextureFromPng(string gamePath, string textureFileName, stri
 
         private void RefreshBackupList(string gamePath, string textureName)
         {
+            if (_archiveManager == null) return;
             try
             {
                 listBoxBackups.Items.Clear();

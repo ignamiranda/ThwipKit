@@ -35,23 +35,8 @@ public class GameVersionDetector
 
     public GameVersionInfo DetectVersion(string gamePath)
     {
-        GameDefinition profile;
-        try
-        {
-            profile = GameDefinitionLoader.GetBuiltInDefinition("MSMR");
-        }
-        catch
-        {
-            profile = new GameDefinition
-            {
-                InternalId = "MSMR",
-                ExecutableName = "Spider-Man Remastered.exe",
-                SupportedExecutables = ["Spider-Man Remastered.exe", "SpiderManRemastered.exe", "SMPC.exe"],
-                VersionFileNames = ["app.info", "version.txt", "VERSION", ".version"],
-                SteamAppId = 1817070
-            };
-        }
-        return DetectVersion(gamePath, profile);
+        GameBase game = GameFactory.CreateGameFromPath(gamePath);
+        return DetectVersion(gamePath, game.Definition);
     }
 
     public GameVersionInfo DetectVersion(string gamePath, GameBase game) => DetectVersion(gamePath, game.Definition);

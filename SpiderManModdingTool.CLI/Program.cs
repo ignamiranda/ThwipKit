@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using SpiderManModdingTool.Core;
+using SpiderManModdingTool.Core.Games;
 
 namespace SpiderManModdingTool.CLI
 {
@@ -69,17 +70,14 @@ namespace SpiderManModdingTool.CLI
             string textureName = args[0];
             string outputPngPath = args[1];
 
-            string gamePath = DetectGamePath();
-            if (gamePath == null)
-            {
-                Console.Error.WriteLine("Error: Could not auto-detect game installation. Please specify game path via environment variable SPIDERMAN_GAME_PATH");
-                return 1;
-            }
+            var resolved = ResolveGame();
+            if (resolved == null) return 1;
+            var (gamePath, game) = resolved.Value;
 
             Console.WriteLine($"Extracting texture '{textureName}' from game at '{gamePath}'...");
-            WarnIfProblematicVersion(gamePath);
+            WarnIfProblematicVersion(gamePath, game);
             
-            var archiveManager = new ArchiveManager();
+            var archiveManager = new ArchiveManager(game);
             bool success = archiveManager.ExtractTextureToPng(gamePath, textureName, outputPngPath);
             
             if (success)
@@ -121,17 +119,14 @@ namespace SpiderManModdingTool.CLI
                 return 1;
             }
 
-            string gamePath = DetectGamePath();
-            if (gamePath == null)
-            {
-                Console.Error.WriteLine("Error: Could not auto-detect game installation. Please specify game path via environment variable SPIDERMAN_GAME_PATH");
-                return 1;
-            }
+            var resolved = ResolveGame();
+            if (resolved == null) return 1;
+            var (gamePath, game) = resolved.Value;
 
             Console.WriteLine($"Rebuilding texture '{textureName}' from PNG '{inputPngPath}'...");
-            WarnIfProblematicVersion(gamePath);
+            WarnIfProblematicVersion(gamePath, game);
             
-            var archiveManager = new ArchiveManager();
+            var archiveManager = new ArchiveManager(game);
             bool success = archiveManager.RebuildTextureFromPng(gamePath, textureName, inputPngPath, createBackup);
             
             if (success)
@@ -161,12 +156,20 @@ namespace SpiderManModdingTool.CLI
             string? gamePath = DetectGamePath();
             if (gamePath != null)
             {
-                var detector = new GameVersionDetector();
-                var versionInfo = detector.DetectVersion(gamePath);
-                Console.WriteLine($"Game version: {versionInfo.VersionString} ({versionInfo.DistributionPlatform})");
-                if (!string.IsNullOrEmpty(versionInfo.WarningMessage))
+                try
                 {
-                    Console.WriteLine($"Warning: {versionInfo.WarningMessage}");
+                    GameBase game = GameFactory.CreateGameFromPath(gamePath);
+                    var detector = new GameVersionDetector();
+                    var versionInfo = detector.DetectVersion(gamePath, game);
+                    Console.WriteLine($"Game version: {versionInfo.VersionString} ({versionInfo.DistributionPlatform})");
+                    if (!string.IsNullOrEmpty(versionInfo.WarningMessage))
+                    {
+                        Console.WriteLine($"Warning: {versionInfo.WarningMessage}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Game installation detected at '{gamePath}' but could not determine profile: {ex.Message}");
                 }
             }
             else
@@ -187,16 +190,13 @@ namespace SpiderManModdingTool.CLI
             }
 
             string textureName = args[0];
-            string gamePath = DetectGamePath();
-            if (gamePath == null)
-            {
-                Console.Error.WriteLine("Error: Could not auto-detect game installation. Please specify game path via environment variable SPIDERMAN_GAME_PATH");
-                return 1;
-            }
+            var resolved = ResolveGame();
+            if (resolved == null) return 1;
+            var (gamePath, game) = resolved.Value;
 
             Console.WriteLine($"Listing textures matching '{textureName}' in game at '{gamePath}'...");
             
-            var archiveManager = new ArchiveManager();
+            var archiveManager = new ArchiveManager(game);
             List<string> textures = archiveManager.GetTextureNames(gamePath);
             
             var matches = textures.Where(t => t.Contains(textureName, StringComparison.OrdinalIgnoreCase)).ToList();
@@ -227,21 +227,18 @@ namespace SpiderManModdingTool.CLI
             }
 
             string subcommand = args[0].ToLowerInvariant();
-            string gamePath = DetectGamePath();
-            if (gamePath == null)
-            {
-                Console.Error.WriteLine("Error: Could not auto-detect game installation. Please specify game path via environment variable SPIDERMAN_GAME_PATH");
-                return 1;
-            }
+            var resolved = ResolveGame();
+            if (resolved == null) return 1;
+            var (gamePath, game) = resolved.Value;
 
-            var archiveManager = new ArchiveManager();
+            var archiveManager = new ArchiveManager(game);
 
             switch (subcommand)
             {
                 case "list":
                     return HandleBackupList(args.Skip(1).ToArray(), gamePath, archiveManager);
                 case "create":
-                    return HandleBackupCreate(args.Skip(1).ToArray(), gamePath, archiveManager);
+                    return HandleBackupCreate(args.Skip(1).ToArray(), gamePath, game, archiveManager);
                 default:
                     Console.Error.WriteLine($"Unknown backup subcommand: {subcommand}");
                     return 1;
@@ -293,7 +290,7 @@ namespace SpiderManModdingTool.CLI
             return 0;
         }
 
-        static int HandleBackupCreate(string[] args, string gamePath, ArchiveManager archiveManager)
+        static int HandleBackupCreate(string[] args, string gamePath, GameBase game, ArchiveManager archiveManager)
         {
             if (args.Length < 1)
             {
@@ -325,7 +322,7 @@ namespace SpiderManModdingTool.CLI
             }
 
             // Find texture in TOC to get offset and size
-            string tocPath = Path.Combine(gamePath, "asset_archive", "TOC");
+            string tocPath = Path.Combine(gamePath, game.ArchiveDirectory, game.TocFileName);
             long textureOffset = -1;
             int textureSize = 0;
 
@@ -377,7 +374,7 @@ namespace SpiderManModdingTool.CLI
             }
 
             // Read texture data
-            string archiveFilePath = Path.Combine(gamePath, "asset_archive", actualTextureName + ".g00s000");
+            string archiveFilePath = Path.Combine(gamePath, game.ArchiveDirectory, actualTextureName + ".g00s000");
             byte[] textureData = new byte[textureSize];
             
             using (FileStream fs = new FileStream(archiveFilePath, FileMode.Open, FileAccess.Read))
@@ -412,16 +409,13 @@ namespace SpiderManModdingTool.CLI
             }
 
             string textureName = args[0];
-            string gamePath = DetectGamePath();
-            if (gamePath == null)
-            {
-                Console.Error.WriteLine("Error: Could not auto-detect game installation. Please specify game path via environment variable SPIDERMAN_GAME_PATH");
-                return 1;
-            }
+            var resolved = ResolveGame();
+            if (resolved == null) return 1;
+            var (gamePath, game) = resolved.Value;
 
             Console.WriteLine($"Restoring texture '{textureName}' from most recent backup...");
             
-            var archiveManager = new ArchiveManager();
+            var archiveManager = new ArchiveManager(game);
             bool success = archiveManager.RestoreTextureFromBackup(gamePath, textureName);
             
             if (success)
@@ -436,12 +430,12 @@ namespace SpiderManModdingTool.CLI
             }
         }
 
-        static void WarnIfProblematicVersion(string gamePath)
+        static void WarnIfProblematicVersion(string gamePath, GameBase game)
         {
             try
             {
                 var detector = new GameVersionDetector();
-                var versionInfo = detector.DetectVersion(gamePath);
+                var versionInfo = detector.DetectVersion(gamePath, game);
                 if (versionInfo.IsProblematicVersion && !string.IsNullOrEmpty(versionInfo.WarningMessage))
                 {
                     Console.Error.WriteLine($"Warning: {versionInfo.WarningMessage}");
@@ -454,6 +448,26 @@ namespace SpiderManModdingTool.CLI
             catch
             {
                 // Silently ignore version detection errors
+            }
+        }
+
+        static (string gamePath, GameBase game)? ResolveGame()
+        {
+            string? gamePath = DetectGamePath();
+            if (gamePath == null)
+            {
+                Console.Error.WriteLine("Error: Could not auto-detect game installation. Please specify game path via environment variable SPIDERMAN_GAME_PATH");
+                return null;
+            }
+            try
+            {
+                GameBase game = GameFactory.CreateGameFromPath(gamePath);
+                return (gamePath, game);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error: {ex.Message}");
+                return null;
             }
         }
 
