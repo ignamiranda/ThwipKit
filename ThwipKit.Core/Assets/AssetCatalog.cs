@@ -42,6 +42,7 @@ public class AssetCatalog
             }
 
             asset.Type = AssetClassifier.Classify(asset);
+            asset.IsInternalTarget = _game.Definition.IsInternalTarget;
 
             try
             {

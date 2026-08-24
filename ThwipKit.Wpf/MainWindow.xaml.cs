@@ -22,4 +22,12 @@ public partial class MainWindow : Window
             viewModel.DetectGameCommand.Execute(dialog.FolderName);
         }
     }
+
+    private void GameCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel viewModel && viewModel.CanSwitchGame)
+        {
+            viewModel.SwitchGameCommand.Execute(null);
+        }
+    }
 }

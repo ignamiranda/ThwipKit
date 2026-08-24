@@ -37,4 +37,27 @@ public sealed class MainWindowViewModelTests
 
         Assert.Equal("game-path", received);
     }
+
+    [Fact]
+    public void KnownGamesPopulatedFromBuiltInDefinitions()
+    {
+        var viewModel = new MainWindowViewModel();
+
+        Assert.Equal(6, viewModel.KnownGames.Count);
+        Assert.Contains(viewModel.KnownGames, game => game.InternalId == "MSMR");
+        Assert.Contains(viewModel.KnownGames, game => game.InternalId == "MM");
+        Assert.Contains(viewModel.KnownGames, game => game.InternalId == "MSM2");
+        Assert.Contains(viewModel.KnownGames, game => game.InternalId == "RCRA");
+        Assert.Contains(viewModel.KnownGames, game => game.InternalId == "I30");
+        Assert.Contains(viewModel.KnownGames, game => game.InternalId == "I33");
+    }
+
+    [Fact]
+    public void CanSwitchGameIsFalseWithoutSelectedGame()
+    {
+        var viewModel = new MainWindowViewModel();
+
+        Assert.Null(viewModel.SelectedGame);
+        Assert.False(viewModel.CanSwitchGame);
+    }
 }

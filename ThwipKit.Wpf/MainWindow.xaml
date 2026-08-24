@@ -12,6 +12,17 @@
             <MenuItem Header="_View" />
             <MenuItem Header="_Help" />
         </Menu>
+        <Border DockPanel.Dock="Top" Height="40" Background="#FF1E2228">
+            <StackPanel Orientation="Horizontal" Margin="8,0">
+                <TextBlock Text="Game:" VerticalAlignment="Center" Margin="0,0,4,0" />
+                <ComboBox x:Name="GameCombo" Width="180"
+                          ItemsSource="{Binding KnownGames}"
+                          DisplayMemberPath="DisplayName"
+                          SelectedItem="{Binding SelectedGame}"
+                          SelectionChanged="GameCombo_SelectionChanged"
+                          Margin="0,0,8,0" />
+            </StackPanel>
+        </Border>
         <StatusBar DockPanel.Dock="Bottom">
             <StatusBarItem>
                 <TextBlock Text="{Binding GamePath}" />
