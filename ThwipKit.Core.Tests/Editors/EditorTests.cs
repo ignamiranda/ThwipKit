@@ -163,4 +163,117 @@ public class EditorRegistryTests : IDisposable
         Assert.False(result.IsValid);
         Assert.Contains("No editor registered", result.Errors[0]);
     }
+
+    [Fact]
+    public void ConfigEditor_SearchAndReplace_FindsAndReplacesText()
+    {
+        string json = "{\"name\": \"test\", \"value\": \"old\"}";
+        var editor = new ConfigEditor();
+
+        var (result, count) = editor.SearchAndReplace(json, "old", "new");
+
+        Assert.Equal(1, count);
+        Assert.Contains("\"value\": \"new\"", result);
+        Assert.DoesNotContain("\"value\": \"old\"", result);
+    }
+
+    [Fact]
+    public void ConfigEditor_SearchAndReplace_CaseInsensitiveByDefault()
+    {
+        string json = "{\"name\": \"TEST\", \"value\": \"Old\"}";
+        var editor = new ConfigEditor();
+
+        var (result, count) = editor.SearchAndReplace(json, "old", "new");
+
+        Assert.Equal(1, count);
+        Assert.Contains("\"value\": \"new\"", result);
+        Assert.DoesNotContain("\"value\": \"Old\"", result);
+    }
+
+    [Fact]
+    public void ConfigEditor_SearchAndReplace_CaseSensitiveWhenSpecified()
+    {
+        string json = "{\"name\": \"TEST\", \"value\": \"Old\"}";
+        var editor = new ConfigEditor();
+
+        var (result, count) = editor.SearchAndReplace(json, "old", "new", caseSensitive: true);
+
+        Assert.Equal(0, count);
+        Assert.Equal(json, result);
+    }
+
+    [Fact]
+    public void ConfigEditor_SearchAndReplace_MultipleOccurrences()
+    {
+        string json = "{\"test\": \"old\", \"other\": \"old\"}";
+        var editor = new ConfigEditor();
+
+        var (result, count) = editor.SearchAndReplace(json, "old", "new");
+
+        Assert.Equal(2, count);
+        Assert.Contains("\"test\": \"new\"", result);
+        Assert.Contains("\"other\": \"new\"", result);
+    }
+
+    [Fact]
+    public void ConfigEditor_SearchAndReplace_EmptySearchTerm()
+    {
+        string json = "{\"test\": \"value\"}";
+        var editor = new ConfigEditor();
+
+        var (result, count) = editor.SearchAndReplace(json, "", "new");
+
+        Assert.Equal(0, count);
+        Assert.Equal(json, result);
+    }
+
+    [Fact]
+    public void ConfigEditor_Diff_IdenticalContent()
+    {
+        string json = "{\"test\": \"value\"}";
+        var editor = new ConfigEditor();
+
+        string diff = editor.Diff(json, json);
+
+        Assert.Empty(diff);
+    }
+
+    [Fact]
+    public void ConfigEditor_Diff_SimpleChange()
+    {
+        string original = "{\"test\": \"old\"}";
+        string modified = "{\"test\": \"new\"}";
+        var editor = new ConfigEditor();
+
+        string diff = editor.Diff(original, modified);
+
+        Assert.Contains("- {\"test\": \"old\"}", diff);
+        Assert.Contains("+ {\"test\": \"new\"}", diff);
+    }
+
+    [Fact]
+    public void ConfigEditor_Diff_MultipleChanges()
+    {
+        string original = "{\"a\": 1, \"b\": \"old\"}";
+        string modified = "{\"a\": 2, \"b\": \"new\"}";
+        var editor = new ConfigEditor();
+
+        string diff = editor.Diff(original, modified);
+
+        Assert.Contains("- {\"a\": 1, \"b\": \"old\"}", diff);
+        Assert.Contains("+ {\"a\": 2, \"b\": \"new\"}", diff);
+    }
+
+    [Fact]
+    public void ConfigEditor_Diff_AdditionAndRemoval()
+    {
+        string original = "{\"a\": 1}";
+        string modified = "{\"a\": 1, \"b\": 2}";
+        var editor = new ConfigEditor();
+
+        string diff = editor.Diff(original, modified);
+
+        Assert.Contains("- {\"a\": 1}", diff);
+        Assert.Contains("+ {\"a\": 1, \"b\": 2}", diff);
+    }
 }
