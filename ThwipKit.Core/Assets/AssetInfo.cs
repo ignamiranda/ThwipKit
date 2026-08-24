@@ -15,6 +15,8 @@ public sealed class AssetInfo
     public AssetType Type { get; set; } = AssetType.Unknown;
     public CompressionFormat? Compression { get; set; }
     public DateTime? LastModified { get; set; }
+    public uint? Crc32 { get; set; }
+    public ulong? Crc64 { get; set; }
 
     public bool IsUnknown => string.IsNullOrWhiteSpace(ResolvedName);
     public bool IsAudio => Type == AssetType.Audio;

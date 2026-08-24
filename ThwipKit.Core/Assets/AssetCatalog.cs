@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using ThwipKit.Core;
+using ThwipKit.Core.Hashing;
 using ThwipKit.Core.Staging;
 using ThwipKit.Core.Games;
 using ThwipKit.Core.Sections;
@@ -50,6 +51,18 @@ public class AssetCatalog
                 if (File.Exists(archivePath))
                 {
                     asset.LastModified = File.GetLastWriteTimeUtc(archivePath);
+
+                    try
+                    {
+                        byte[] raw = archiveManager.ReadFromDsar(archivePath, asset.Offset, asset.Size);
+                        asset.Crc32 = Crc32.Compute(raw);
+                        asset.Crc64 = Crc64.Compute(raw);
+                    }
+                    catch (Exception)
+                    {
+                        // Asset bytes may sit in an unsupported or absent compression
+                        // block; CRC stays unresolved while other metadata remains.
+                    }
                 }
             }
             catch (Exception)

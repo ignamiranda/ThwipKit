@@ -66,6 +66,8 @@
                 <DataGridTextColumn Header="Resolved Name" Binding="{Binding ResolvedName}" Width="*" />
                 <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="90" />
                 <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource ByteSizeConverter}}" Width="100" />
+                <DataGridTextColumn Header="CRC32" Binding="{Binding Crc32, StringFormat={}{0:X8}, TargetNullValue='—'}" Width="110" />
+                <DataGridTextColumn Header="CRC64" Binding="{Binding Crc64, StringFormat={}{0:X16}, TargetNullValue='—'}" Width="190" />
                 <DataGridTextColumn Header="Archive" Binding="{Binding ArchiveName}" Width="180" />
             </DataGrid.Columns>
             <DataGrid.ContextMenu>
@@ -100,6 +102,10 @@
                     <TextBlock Margin="0,2,0,14" Foreground="#FFF1F5F8" Text="{Binding ArchiveName}" />
                     <TextBlock Foreground="#FF8C98A5" Text="Archive index" />
                     <TextBlock Margin="0,2,0,14" Foreground="#FFF1F5F8" Text="{Binding ArchiveIndex}" />
+                    <TextBlock Foreground="#FF8C98A5" Text="CRC32" />
+                    <TextBlock Margin="0,2,0,14" Foreground="#FFF1F5F8" FontFamily="Consolas" Text="{Binding Crc32, StringFormat={}{0:X8}, TargetNullValue='—'}" />
+                    <TextBlock Foreground="#FF8C98A5" Text="CRC64" />
+                    <TextBlock Margin="0,2,0,14" Foreground="#FFF1F5F8" FontFamily="Consolas" Text="{Binding Crc64, StringFormat={}{0:X16}, TargetNullValue='—'}" />
                     <TextBlock Foreground="#FF8C98A5" Text="Resolved" />
                     <TextBlock Margin="0,2,0,14" Foreground="#FFF1F5F8" Text="{Binding IsUnknown, StringFormat=Unresolved: {0}}" />
                 </StackPanel>
@@ -108,7 +114,11 @@
                     <TextBlock Margin="0,0,0,6" Foreground="#FF83D5FF" FontWeight="SemiBold" Text="JUMP TO" />
                     <DockPanel LastChildFill="True">
                         <Button DockPanel.Dock="Right" Margin="6,0,0,0" Padding="10,4" Content="Go" Command="{Binding JumpToCommand}" />
-                        <TextBox Padding="8,4" Text="{Binding JumpToText, UpdateSourceTrigger=PropertyChanged}" ToolTip="Asset ID (hex) or name" />
+                        <TextBox Padding="8,4" Text="{Binding JumpToText, UpdateSourceTrigger=PropertyChanged}" ToolTip="Asset ID (hex) or name">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Enter" Command="{Binding JumpToCommand}" />
+                            </TextBox.InputBindings>
+                        </TextBox>
                     </DockPanel>
 
                     <TextBlock Margin="0,14,0,6" Foreground="#FF83D5FF" FontWeight="SemiBold" Text="PRESETS" />

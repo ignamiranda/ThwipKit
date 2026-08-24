@@ -1,8 +1,10 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using ThwipKit.Core.Assets;
 using ThwipKit.Core.GameDefinitions;
 using ThwipKit.Core.Games;
+using ThwipKit.Core.Hashing;
 using Xunit;
 
 namespace ThwipKit.Core.Tests;
@@ -216,5 +218,51 @@ public class AssetCatalogTests : IDisposable
         InvalidDataException exception = Assert.Throws<InvalidDataException>(() => catalog.BuildAssets(toc));
 
         Assert.Contains("archive index 3", exception.Message);
+    }
+
+    [Fact]
+    public void GetAssetsComputesCrcFromArchiveBytes()
+    {
+        byte[] payload = Enumerable.Range(0, 123).Select(i => (byte)i).ToArray();
+        CreateDsarArchive(Path.Combine(_assetArchivePath, "Archive0"), payload, realOffset: 456, realSize: 123);
+
+        var catalog = new AssetCatalog(CreateTestGame());
+        AssetInfo asset = Assert.Single(catalog.GetAssets(_gamePath));
+
+        Assert.Equal(Crc32.Compute(payload), asset.Crc32);
+        Assert.Equal(Crc64.Compute(payload), asset.Crc64);
+    }
+
+    [Fact]
+    public void GetAssetsLeavesCrcUnresolvedWhenArchiveAbsent()
+    {
+        var catalog = new AssetCatalog(CreateTestGame());
+
+        AssetInfo asset = Assert.Single(catalog.GetAssets(_gamePath));
+
+        Assert.Null(asset.Crc32);
+        Assert.Null(asset.Crc64);
+    }
+
+    private static void CreateDsarArchive(string path, byte[] payload, uint realOffset, uint realSize)
+    {
+        using var fs = File.Create(path);
+        using var writer = new BinaryWriter(fs);
+        writer.Write(new byte[] { (byte)'D', (byte)'S', (byte)'A', (byte)'R' });
+        writer.Write(1U);
+        writer.Write(1U);
+        writer.Write(0U);
+        writer.Write(0UL);
+        writer.Write(new byte[8]);
+
+        writer.Write(realOffset);
+        writer.Write(0U);
+        writer.Write(64U);
+        writer.Write(0U);
+        writer.Write(realSize);
+        writer.Write((uint)payload.Length);
+        writer.Write((byte)0);
+        writer.Write(new byte[7]);
+        writer.Write(payload);
     }
 }
