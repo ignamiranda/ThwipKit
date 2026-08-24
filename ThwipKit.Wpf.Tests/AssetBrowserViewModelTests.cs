@@ -118,6 +118,19 @@ public sealed class AssetBrowserViewModelTests
         Assert.Equal(3, viewModel.AssetsView.Cast<AssetInfo>().Count());
     }
 
+    [Fact]
+    public void InternalTargetAndTypeFiltersCombine()
+    {
+        var viewModel = CreateViewModelWithInternalTargets();
+        viewModel.LoadAssets();
+
+        viewModel.SelectedInternalTargetFilter = InternalTargetFilter.NonInternalTargetsOnly;
+        viewModel.SelectedType = ThwipKit.Core.Staging.AssetType.Texture;
+
+        Assert.Single(viewModel.AssetsView.Cast<AssetInfo>());
+        Assert.Equal("characters/hero.texture", viewModel.AssetsView.Cast<AssetInfo>().Single().ResolvedName);
+    }
+
     private static AssetBrowserViewModel CreateViewModel()
     {
         AssetInfo[] assets =

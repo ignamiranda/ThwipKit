@@ -19,6 +19,7 @@
                           ItemsSource="{Binding KnownGames}"
                           DisplayMemberPath="DisplayName"
                           SelectedItem="{Binding SelectedGame}"
+                          SelectionChanged="GameCombo_SelectionChanged"
                           Margin="0,0,8,0" />
             </StackPanel>
         </Border>

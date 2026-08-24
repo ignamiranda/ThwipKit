@@ -127,6 +127,11 @@ public sealed class MainWindowViewModel : ViewModelBase
             return;
         }
 
+        if (directory == _gamePath)
+        {
+            return;
+        }
+
         DetectGame(directory);
     }
 }
