@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using ThwipKit.Core.Assets;
 using ThwipKit.Core.Games;
-using ThwipKit.Core.Staging;
 
 namespace ThwipKit.Core.Staging;
 
@@ -14,18 +13,21 @@ public sealed class ReplacementService
     private readonly ArchiveManager _archiveManager;
     private readonly BackupSystem _backupSystem;
     private readonly AssetBrowser _assetBrowser;
+    private readonly IAssetTrackingSink? _trackingSink;
     private readonly List<StagedReplacement> _stagedReplacements = [];
 
     public ReplacementService(
         GameBase game,
         StageManager stageManager,
         ArchiveManager archiveManager,
-        BackupSystem backupSystem)
+        BackupSystem backupSystem,
+        IAssetTrackingSink? trackingSink = null)
     {
         _game = game ?? throw new ArgumentNullException(nameof(game));
         _stageManager = stageManager ?? throw new ArgumentNullException(nameof(stageManager));
         _archiveManager = archiveManager ?? throw new ArgumentNullException(nameof(archiveManager));
         _backupSystem = backupSystem ?? throw new ArgumentNullException(nameof(backupSystem));
+        _trackingSink = trackingSink;
         _assetBrowser = new AssetBrowser(game);
     }
 
@@ -137,6 +139,22 @@ public sealed class ReplacementService
 
         byte[] replacementData = File.ReadAllBytes(replacementFilePath);
         _archiveManager.WriteToDsar(archivePath, asset.Offset, asset.Size, replacementData);
+
+        // Stage the replacement and notify the tracking sink
+        string assetType = asset.Type.ToStageFolderName();
+        string relativePath = !string.IsNullOrWhiteSpace(asset.ResolvedName)
+            ? asset.ResolvedName!
+            : $"{asset.ArchiveName}_{asset.Offset}.bin";
+
+        _stageManager.EnsureStageDirectoryExistsForAsset(assetType, relativePath);
+        string stagePath = _stageManager.GetAssetStagePath(assetType, relativePath);
+        File.Copy(replacementFilePath, stagePath, overwrite: true);
+
+        _trackingSink?.OnAssetReplaced(
+            asset.AssetId,
+            Path.Combine(_game.InternalId, assetType, relativePath).Replace('\\', '/'),
+            replacementFilePath,
+            asset);
     }
 
     public PreviewResult PreviewReplacement(StagedReplacement replacement)
