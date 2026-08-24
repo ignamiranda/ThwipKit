@@ -20,13 +20,6 @@ public enum AssetSection
     Audio
 }
 
-public enum InternalTargetFilter
-{
-    All,
-    InternalTargetsOnly,
-    NonInternalTargetsOnly
-}
-
 public sealed record FilterPreset(string Name, string? SearchText, AssetType? Type, string? Archive, AssetSection Section);
 
 public sealed class AssetBrowserViewModel : ViewModelBase
@@ -438,12 +431,7 @@ public sealed class AssetBrowserViewModel : ViewModelBase
             || string.Equals(asset.ArchiveName, SelectedArchive, StringComparison.OrdinalIgnoreCase);
         bool typeMatches = !SelectedType.HasValue || asset.Type == SelectedType.Value;
 
-        bool internalTargetMatches = _selectedInternalTargetFilter switch
-        {
-            InternalTargetFilter.InternalTargetsOnly => asset.IsInternalTarget,
-            InternalTargetFilter.NonInternalTargetsOnly => !asset.IsInternalTarget,
-            _ => true
-        };
+        bool internalTargetMatches = AssetFilters.MatchesInternalTarget(asset, _selectedInternalTargetFilter);
 
         bool searchMatches = _searchPredicate is null || string.IsNullOrWhiteSpace(SearchText) || _searchPredicate(asset);
 

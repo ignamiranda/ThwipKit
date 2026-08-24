@@ -3,6 +3,7 @@ using System.IO;
 using System.Windows.Input;
 using ThwipKit.Core;
 using ThwipKit.Core.Assets;
+using ThwipKit.Core.GameDefinitions;
 using ThwipKit.Core.Games;
 using ThwipKit.Wpf.Mvvm;
 using ThwipKit.Wpf.Services;
@@ -23,7 +24,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     public MainWindowViewModel()
     {
         DetectGameCommand = new AsyncRelayCommand(parameter => DetectGameAsync(parameter as string));
-        SwitchGameCommand = new RelayCommand(_ => SwitchGame(), _ => CanSwitchGame());
+        SwitchGameCommand = new RelayCommand(_ => SwitchGame(), _ => CanSwitchGame);
         LoadKnownGames();
     }
 
@@ -43,7 +44,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     public bool CanSwitchGame => SelectedGame is not null && _gameDirectories.ContainsKey(SelectedGame.InternalId);
 
-    public ICommand SwitchGameCommand { get; }
+    public RelayCommand SwitchGameCommand { get; }
 
     public string GamePath
     {
@@ -111,8 +112,9 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private void LoadKnownGames()
     {
+        GameDefinitionLoader.LoadBuiltInDefinitions();
         KnownGames.Clear();
-        foreach (GameDefinition definition in GameDefinitionLoader.LoadBuiltInDefinitions())
+        foreach (GameDefinition definition in GameDefinitionLoader.GetAllDefinitions().Values)
         {
             KnownGames.Add(new GameDescriptor(definition.InternalId, definition.DisplayName, definition.IsInternalTarget));
         }

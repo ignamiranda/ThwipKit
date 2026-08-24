@@ -36,7 +36,7 @@ public class AssetCatalogTests : IDisposable
         }
     }
 
-    private static GameBase CreateTestGame()
+    private static GameBase CreateTestGame(bool isInternalTarget = false)
     {
         return new ConfiguredGame(new GameDefinition
         {
@@ -45,6 +45,7 @@ public class AssetCatalogTests : IDisposable
             ArchiveDirectory = "asset_archive",
             TocFileName = "TOC",
             TocFormat = TocFormat.ZlibDat1,
+            IsInternalTarget = isInternalTarget,
             CompressionFormats = [CompressionFormat.Zlib],
             SectionTags = new Dictionary<string, string>
             {
@@ -80,6 +81,26 @@ public class AssetCatalogTests : IDisposable
         Assert.Equal(456U, asset.Offset);
         Assert.Equal("Archive0", asset.ArchiveName);
         Assert.Equal(0U, asset.ArchiveIndex);
+    }
+
+    [Fact]
+    public void GetAssetsPopulatesIsInternalTargetFromDefinition()
+    {
+        var catalog = new AssetCatalog(CreateTestGame(isInternalTarget: true));
+
+        AssetInfo asset = Assert.Single(catalog.GetAssets(_gamePath));
+
+        Assert.True(asset.IsInternalTarget);
+    }
+
+    [Fact]
+    public void GetAssetsPopulatesIsInternalTargetFalseFromDefinition()
+    {
+        var catalog = new AssetCatalog(CreateTestGame(isInternalTarget: false));
+
+        AssetInfo asset = Assert.Single(catalog.GetAssets(_gamePath));
+
+        Assert.False(asset.IsInternalTarget);
     }
 
     [Fact]
