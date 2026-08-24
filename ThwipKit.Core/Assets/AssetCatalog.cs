@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using ThwipKit.Core;
 using ThwipKit.Core.Staging;
 using ThwipKit.Core.Games;
 using ThwipKit.Core.Sections;
@@ -30,6 +31,9 @@ public class AssetCatalog
         IReadOnlyDictionary<string, string> hashTable = _game.LoadHashTable(gamePath);
         IReadOnlyList<AssetInfo> assets = BuildAssets(toc);
 
+        var archiveManager = new ArchiveManager(_game);
+        string archiveDirectory = _game.ArchiveDirectory;
+
         foreach (AssetInfo asset in assets)
         {
             if (hashTable.TryGetValue(asset.AssetIdHex, out string? resolvedName))
@@ -38,6 +42,16 @@ public class AssetCatalog
             }
 
             asset.Type = AssetClassifier.Classify(asset);
+
+            try
+            {
+                string archivePath = Path.Combine(gamePath, archiveDirectory, asset.ArchiveName);
+                asset.Compression = archiveManager.GetCompressionFormat(archivePath, asset.Offset, asset.Size);
+            }
+            catch (Exception)
+            {
+                // Archive may be absent or not a DSAR file; compression stays unresolved.
+            }
         }
 
         return assets;
