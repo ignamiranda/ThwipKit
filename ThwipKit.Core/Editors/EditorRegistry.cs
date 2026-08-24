@@ -25,6 +25,21 @@ public sealed class EditorPreferences
     public string? GetToolPath(string editorKey)
         => _toolPaths.TryGetValue(editorKey, out string? path) ? path : null;
 
+    /// <summary>
+    /// Resolves a tool path keyed by the file's extension (normalized to a
+    /// lower-case extension without the leading dot, e.g. <c>.dds</c> -> <c>dds</c>).
+    /// </summary>
+    public string? GetToolPathForFile(string filePath)
+    {
+        string extension = Path.GetExtension(filePath).TrimStart('.').ToLowerInvariant();
+        if (extension.Length == 0)
+        {
+            return null;
+        }
+
+        return GetToolPath(extension);
+    }
+
     public void SetToolPath(string editorKey, string toolPath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(editorKey);
@@ -78,6 +93,12 @@ public sealed class EditorPreferences
 public sealed class EditorRegistry
 {
     private readonly List<IAssetEditor> _editors = [];
+    private readonly ExternalToolLauncher _launcher;
+
+    public EditorRegistry(EditorPreferences? preferences = null)
+    {
+        _launcher = new ExternalToolLauncher(preferences ?? new EditorPreferences());
+    }
 
     public IReadOnlyList<IAssetEditor> Editors => _editors.AsReadOnly();
 
@@ -106,4 +127,18 @@ public sealed class EditorRegistry
 
         return editor.Validate(filePath);
     }
+
+    public bool SupportsUndo(IAssetEditor? editor)
+        => editor is IUndoCapableEditor undo && undo.SupportsUndo;
+
+    public string? Undo(IAssetEditor? editor, string filePath)
+        => (editor as IUndoCapableEditor)?.Undo(filePath);
+
+    public string? Redo(IAssetEditor? editor, string filePath)
+        => (editor as IUndoCapableEditor)?.Redo(filePath);
+
+    public int LaunchExternalEditor(IAssetEditor? editor, string filePath)
+        => (editor as IExternalEditorLauncher)?.LaunchExternalEditor(filePath)
+           ?? throw new NotSupportedException(
+               $"Editor for '{Path.GetExtension(filePath)}' does not support launching an external tool.");
 }
