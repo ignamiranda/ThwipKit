@@ -1,0 +1,97 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using ThwipKit.Core.Games;
+using ThwipKit.Core.Sections;
+
+namespace ThwipKit.Core.Assets;
+
+/// <summary>
+/// Reads TOC data and produces a catalog of game assets with full metadata.
+/// </summary>
+public class AssetCatalog
+{
+    private readonly GameBase _game;
+
+    public AssetCatalog(GameBase game)
+    {
+        _game = game ?? throw new ArgumentNullException(nameof(game));
+    }
+
+    /// <summary>
+    /// Parses the TOC file at the given game path and returns one AssetInfo
+    /// object for each valid size entry.
+    /// </summary>
+    public IReadOnlyList<AssetInfo> GetAssets(string gamePath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(gamePath);
+
+        string tocPath = GetTocPath(gamePath);
+        if (!File.Exists(tocPath))
+        {
+            throw new FileNotFoundException("TOC file not found", tocPath);
+        }
+
+        TocData toc = _game.ParseToc(tocPath);
+        IReadOnlyDictionary<string, string> hashTable = _game.LoadHashTable(gamePath);
+        IReadOnlyList<AssetInfo> assets = BuildAssets(toc);
+
+        foreach (AssetInfo asset in assets)
+        {
+            if (hashTable.TryGetValue(asset.AssetIdHex, out string? resolvedName))
+            {
+                asset.ResolvedName = resolvedName;
+            }
+        }
+
+        return assets;
+    }
+
+    /// <summary>
+    /// Builds AssetInfo objects from parsed TOC data.
+    /// </summary>
+    public IReadOnlyList<AssetInfo> BuildAssets(TocData toc)
+    {
+        ArgumentNullException.ThrowIfNull(toc);
+
+        var assets = new List<AssetInfo>();
+
+        if (toc.SizeEntries.Count == 0 || toc.AssetIds.Count == 0 || toc.Offsets.Count == 0)
+        {
+            return assets;
+        }
+
+        for (int i = 0; i < toc.SizeEntries.Count; i++)
+        {
+            SizeEntriesSection sizeEntry = toc.SizeEntries[i];
+
+            if (sizeEntry.Index >= toc.AssetIds.Count || i >= toc.Offsets.Count)
+            {
+                continue;
+            }
+
+            ulong assetId = toc.AssetIds[(int)sizeEntry.Index];
+            OffsetsSection offsetEntry = toc.Offsets[i];
+
+            string archiveName = string.Empty;
+            if (offsetEntry.ArchiveIndex < toc.Archives.Count)
+            {
+                archiveName = toc.Archives[(int)offsetEntry.ArchiveIndex].Name;
+            }
+
+            assets.Add(new AssetInfo
+            {
+                AssetId = assetId,
+                Size = sizeEntry.Value,
+                Offset = offsetEntry.OffsetInArchive,
+                ArchiveName = archiveName,
+                ArchiveIndex = offsetEntry.ArchiveIndex,
+            });
+        }
+
+        return assets;
+    }
+
+    private string GetTocPath(string gamePath) =>
+        Path.Combine(gamePath, _game.ArchiveDirectory, _game.TocFileName);
+}

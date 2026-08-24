@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "goalID": "a29995ad-df5d-4a3a-9741-f05559740c18",
+  "sessionID": "ses_fd796b49effeQlfBW19FLGTMZT",
+  "reason": "cleared",
+  "archivedAt": 1787427343053,
+  "goal": {
+    "schemaVersion": 1,
+    "id": "a29995ad-df5d-4a3a-9741-f05559740c18",
+    "sessionID": "ses_fd796b49effeQlfBW19FLGTMZT",
+    "objective": "Complete all AFK work on the wayfinder map/tickets",
+    "constraints": [],
+    "revision": 1,
+    "status": "paused",
+    "requirements": [
+      {
+        "id": "025a3b84-6568-41a5-aeee-84b30ed83ed4",
+        "text": "Objective achieved: Complete all AFK work on the wayfinder map/tickets",
+        "required": true,
+        "status": "pending",
+        "evidenceIDs": [],
+        "verification": "semantic",
+        "source": "objective",
+        "updatedAt": 1787386117875
+      }
+    ],
+    "evidence": [],
+    "checks": [],
+    "execution": {
+      "agent": "build",
+      "model": {
+        "providerID": "omniroute",
+        "modelID": "auto/best-free"
+      },
+      "modelContext": {
+        "contextLimit": 0,
+        "outputLimit": 0,
+        "autoCompaction": false,
+        "observedAt": 1787427294412,
+        "lastRequestTokens": 65244
+      }
+    },
+    "usage": {
+      "turns": 2,
+      "tokens": 61727,
+      "cost": 0,
+      "runtimeMs": 29274,
+      "seenMessageIDs": [
+        "msg_0288af788001Yk5POFD9gXJU6c",
+        "msg_0288bf590001BWpVxKKx3blqO5"
+      ]
+    },
+    "revisionTurnBaseline": 0,
+    "budget": {
+      "maxTurns": 30,
+      "maxTokens": 400000,
+      "maxCost": 0,
+      "maxRuntimeMs": 3600000
+    },
+    "progressRevision": 9,
+    "observedProgressRevision": 0,
+    "progressFingerprints": [
+      "shell:dae7fd27948e4d20b49f5f02fedf9228ec6247ccdbfcb23e9a33a57b3213a530",
+      "patch:323ccd3bb5dad2773cd7c27e41500b6f05491d07",
+      "patch:69706785211f280bb7ed68ce31788fb413cee421",
+      "shell:8513099b583505011687fd97a204ab0db03f91fca4b95d48fae494537411513e",
+      "shell:12ad14cfde7e326a7d903df9633779d26ab59b57769f49e718f86430e527fdc7",
+      "shell:f9ea2c64ac52f3ff516d03d0f8031419988400c47672901651fd0fb79edc50fe",
+      "shell:3da16c0753ba1d3270cb83e650008cbbbc4b0d8805161d380c095f5d1b84fce6",
+      "shell:93b237d828530b3ab33b7be2c52929b4938904f385c651e1b6fb3c32954c24bd",
+      "shell:b022ea72d44bab55e2b6f07c4a120a29af639ad45f7b0eaee1a17f3fc4cba6db"
+    ],
+    "stalledTurns": 0,
+    "progressNotes": [
+      {
+        "time": 1787386605464,
+        "summary": "[host:tool:bash] Goal-owned shell command completed.",
+        "next": ""
+      },
+      {
+        "time": 1787386606186,
+        "summary": "[host:patch] Workspace changed: F:/OpenCode/SpiderManModTool/.opencode/goals/544d4462f2873337f7c78571158bb52e.json",
+        "next": ""
+      },
+      {
+        "time": 1787386637361,
+        "summary": "Confirmed the active goal and began inventorying all AFK tracker tickets and dependencies. Established execution order: 010-c, then 010-d, with 010-e independent after 010-b.",
+        "next": "Complete ticket inventory, implement 010-c with smoke tests, review, verify, and commit."
+      },
+      {
+        "time": 1787386670441,
+        "summary": "[host:patch] Workspace changed: F:/OpenCode/SpiderManModTool/.opencode/goals/544d4462f2873337f7c78571158bb52e.json",
+        "next": ""
+      },
+      {
+        "time": 1787386698519,
+        "summary": "[host:tool:bash] Goal-owned shell command completed.",
+        "next": ""
+      },
+      {
+        "time": 1787386769083,
+        "summary": "[host:tool:bash] Goal-owned shell command completed.",
+        "next": ""
+      },
+      {
+        "time": 1787386800867,
+        "summary": "[host:tool:bash] Goal-owned shell command completed.",
+        "next": ""
+      },
+      {
+        "time": 1787386853642,
+        "summary": "[host:tool:bash] Goal-owned shell command completed.",
+        "next": ""
+      },
+      {
+        "time": 1787386881591,
+        "summary": "[host:tool:bash] Goal-owned shell command completed.",
+        "next": ""
+      },
+      {
+        "time": 1787386925192,
+        "summary": "[host:tool:bash] Goal-owned shell command completed.",
+        "next": ""
+      },
+      {
+        "time": 1787387523383,
+        "summary": "Completed and committed 010-c WPF migration as 7efcb50. Implemented 010-d asset browser UI with MVVM filtering, sorting, archive list, details panel, size formatting, virtualization, loading state, and tests; WPF test project passes 6/6. Independent review is running.",
+        "next": "Address 010-d review findings, run full verification, commit, mark ticket done, then implement 010-e CLI integration."
+      },
+      {
+        "time": 1787389017791,
+        "summary": "Committed verified WPF migration fixes (71c1ca4) and WPF asset browser UI (8a7e1bd). Implemented ticket 010-e CLI assets list/search/info/archives with filters and help. Full solution build passes with 0 warnings/errors and all 46 tests pass.",
+        "next": "Wait for CLI review, fix any findings, commit 010-e, mark ticket complete, then execute remaining AFK-ready tickets identified by map audit."
+      }
+    ],
+    "storageGeneration": 229,
+    "createdAt": 1787386117875,
+    "updatedAt": 1787427294412,
+    "stopReason": "Restart recovery prompt failed: TypeError: fetch failed"
+  }
+}

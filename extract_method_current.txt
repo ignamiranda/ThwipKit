@@ -1,0 +1,17 @@
+        public void ExtractTextureToPng(string gamePath, string textureName, string outputPngPath)
+        {
+            string tocPath = GetTocPath(gamePath);
+            
+            TocData toc = ParseToc(tocPath);
+            
+textureName
+            
+                throw new FileNotFoundException($"Texture \
+textureName
+\ not found in game archives");
+            string archiveFilePath = GetArchiveFilePath(gamePath, archiveName);
+            byte[] textureData = ReadFromDsar(archiveFilePath, textureOffset, (uint)textureSize);
+            
+            using Bitmap bitmap = DecodeTextureToBitmap(textureData);
+            bitmap.Save(outputPngPath, ImageFormat.Png);
+        }

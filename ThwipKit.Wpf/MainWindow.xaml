@@ -1,0 +1,45 @@
+<Window x:Class="ThwipKit.Wpf.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="clr-namespace:ThwipKit.Wpf.Views"
+        Title="Spider-Man Modding Tool" Height="720" Width="1200" MinHeight="480" MinWidth="800">
+    <DockPanel>
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_File">
+                <MenuItem Header="_Open Game Directory..." Click="OpenGameDirectory_Click" />
+            </MenuItem>
+            <MenuItem Header="_Edit" />
+            <MenuItem Header="_View" />
+            <MenuItem Header="_Help" />
+        </Menu>
+        <StatusBar DockPanel.Dock="Bottom">
+            <StatusBarItem>
+                <TextBlock Text="{Binding GamePath}" />
+            </StatusBarItem>
+            <Separator />
+            <StatusBarItem>
+                <TextBlock Text="{Binding AssetCount, StringFormat=Assets: {0:N0}}" />
+            </StatusBarItem>
+            <Separator />
+            <StatusBarItem>
+                <TextBlock Text="{Binding StatusMessage}" />
+            </StatusBarItem>
+        </StatusBar>
+        <Grid Background="#FF101317">
+            <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="20" Foreground="#FF8C98A5"
+                       Text="Open a game directory to load its asset catalog." />
+            <views:AssetBrowserView DataContext="{Binding AssetBrowser}">
+                <views:AssetBrowserView.Style>
+                    <Style TargetType="views:AssetBrowserView">
+                        <Setter Property="Visibility" Value="Visible" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding AssetBrowser}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </views:AssetBrowserView.Style>
+            </views:AssetBrowserView>
+        </Grid>
+    </DockPanel>
+</Window>

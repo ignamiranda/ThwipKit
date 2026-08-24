@@ -1,0 +1,2 @@
+                throw new FileNotFoundException("Texture '{0}' not found in game archives", textureName);
+            }

@@ -15,7 +15,7 @@ if errorlevel 1 (
 
 echo.
 echo Building Spider-Man Modding Tool...
-dotnet build "SpiderManModdingTool\SpiderManModdingTool.csproj" -c Debug
+dotnet build "ThwipKit\ThwipKit.csproj" -c Debug
 if errorlevel 1 (
     echo Error: Failed to build application
     pause
@@ -24,7 +24,7 @@ if errorlevel 1 (
 
 echo.
 echo Launching Spider-Man Modding Tool...
-dotnet run --project "SpiderManModdingTool\SpiderManModdingTool.csproj"
+dotnet run --project "ThwipKit\ThwipKit.csproj"
 if errorlevel 1 (
     echo Error: Failed to run application
     pause
