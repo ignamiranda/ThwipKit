@@ -12,6 +12,8 @@ namespace ThwipKit.Core.Editors;
 public sealed class MaterialEditor : IAssetEditor
 {
     private readonly AssetValidator _validator;
+    private readonly EditorPreferences? _preferences;
+    private readonly EditorUndoSupport _undo = new();
 
     public EditorCapabilities Capabilities { get; } = new()
     {
@@ -19,12 +21,14 @@ public sealed class MaterialEditor : IAssetEditor
         FileExtensions = [".material"],
         CanEdit = true,
         CanValidate = true,
-        RequiresExternalTool = false
+        RequiresExternalTool = false,
+        SupportsUndo = true
     };
 
-    public MaterialEditor(GameBase game)
+    public MaterialEditor(GameBase game, EditorPreferences? preferences = null)
     {
         _validator = new AssetValidator(game ?? throw new ArgumentNullException(nameof(game)));
+        _preferences = preferences;
     }
 
     public bool CanHandle(string filePath)
@@ -65,7 +69,21 @@ public sealed class MaterialEditor : IAssetEditor
 
         manifest.Validate();
         var options = new JsonSerializerOptions { WriteIndented = true };
+
+        _undo.CaptureBeforeWrite(filePath);
         File.WriteAllText(filePath, JsonSerializer.Serialize(manifest, options));
+    }
+
+    public bool CanUndo => _undo.CanUndo;
+
+    public void Undo() => _undo.Undo();
+
+    public void Redo() => _undo.Redo();
+
+    public int LaunchExternalEditor(string filePath)
+    {
+        string? toolPath = _preferences?.GetToolPathForFile(filePath);
+        return ExternalToolLauncher.Launch(toolPath ?? throw new NotSupportedException("No external tool configured for material files."), filePath);
     }
 }
 
@@ -182,7 +200,7 @@ public sealed class ModelEditor : IAssetEditor
     /// </summary>
     public int Convert(string filePath)
     {
-        string? converterPath = _preferences.GetToolPath("model")
+        string? converterPath = _preferences.GetToolPathForFile(filePath)
             ?? throw new NotSupportedException(
                 "No external model converter is configured. Model conversion requires an external tool; set its path via EditorPreferences.");
 
@@ -201,4 +219,15 @@ public sealed class ModelEditor : IAssetEditor
         process.WaitForExit();
         return process.ExitCode;
     }
+
+    public bool CanUndo => false;
+
+    public void Undo()
+        => throw new NotSupportedException("Model Editor does not support undo.");
+
+    public void Redo()
+        => throw new NotSupportedException("Model Editor does not support redo.");
+
+    public int LaunchExternalEditor(string filePath)
+        => Convert(filePath);
 }

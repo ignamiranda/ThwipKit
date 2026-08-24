@@ -163,4 +163,147 @@ public class EditorRegistryTests : IDisposable
         Assert.False(result.IsValid);
         Assert.Contains("No editor registered", result.Errors[0]);
     }
+
+    [Fact]
+    public void ConfigEditor_SaveUndoRedo_RestoresPriorContent()
+    {
+        string path = Path.Combine(_tempDir, "undo.config");
+        File.WriteAllText(path, "{\"a\":1}");
+
+        var editor = new ConfigEditor();
+        Assert.False(editor.CanUndo);
+        Assert.True(editor.Capabilities.SupportsUndo);
+
+        editor.Save(path, "{\"b\":2}");
+        Assert.True(editor.CanUndo);
+        Assert.Contains("\"b\"", File.ReadAllText(path));
+
+        editor.Undo();
+        Assert.Contains("\"a\"", File.ReadAllText(path));
+
+        editor.Redo();
+        Assert.Contains("\"b\"", File.ReadAllText(path));
+    }
+
+    [Fact]
+    public void MaterialEditor_SaveUndo_RestoresPriorManifest()
+    {
+        string path = Path.Combine(_tempDir, "undo.material");
+        _materialEditor.Save(path, new MaterialManifest { MaterialName = "Original" });
+
+        _materialEditor.Save(path, new MaterialManifest { MaterialName = "Modified" });
+        Assert.True(_materialEditor.CanUndo);
+
+        _materialEditor.Undo();
+        Assert.Equal("Original", _materialEditor.Load(path).MaterialName);
+
+        _materialEditor.Redo();
+        Assert.Equal("Modified", _materialEditor.Load(path).MaterialName);
+    }
+
+    [Fact]
+    public void TextureEditor_Undo_ThrowsNotSupported()
+    {
+        var archiveManager = new ArchiveManager(_game);
+        var editor = new TextureEditor(archiveManager, _game);
+
+        Assert.False(editor.Capabilities.SupportsUndo);
+        Assert.False(editor.CanUndo);
+        Assert.Throws<NotSupportedException>(() => editor.Undo());
+        Assert.Throws<NotSupportedException>(() => editor.Redo());
+    }
+
+    [Fact]
+    public void ConfigEditor_LaunchExternalEditor_WithoutTool_ThrowsNotSupported()
+    {
+        var editor = new ConfigEditor();
+        Assert.Throws<NotSupportedException>(() => editor.LaunchExternalEditor(Path.Combine(_tempDir, "x.config")));
+    }
+
+    [Fact]
+    public void ConfigEditor_LaunchExternalEditor_MissingTool_ThrowsFileNotFound()
+    {
+        string prefsPath = Path.Combine(_tempDir, "prefs-missing.json");
+        var prefs = new EditorPreferences(prefsPath);
+        prefs.SetToolPath(".config", Path.Combine(_tempDir, "does-not-exist.exe"));
+
+        var editor = new ConfigEditor(prefs);
+        Assert.Throws<FileNotFoundException>(() => editor.LaunchExternalEditor(Path.Combine(_tempDir, "x.config")));
+    }
+
+    [Fact]
+    public void ModelEditor_LaunchExternalEditor_WithoutTool_ThrowsWithClearMessage()
+    {
+        var prefs = new EditorPreferences(Path.Combine(_tempDir, "prefs-model.json"));
+        string modelPath = Path.Combine(_tempDir, "hero.model");
+        File.WriteAllBytes(modelPath, [0x01]);
+
+        var editor = new ModelEditor(prefs);
+        NotSupportedException ex = Assert.Throws<NotSupportedException>(() => editor.LaunchExternalEditor(modelPath));
+        Assert.Contains("external model converter", ex.Message);
+    }
+
+    [Fact]
+    public void EditorPreferences_GetToolPathForFile_NormalizesExtensionKey()
+    {
+        string prefsPath = Path.Combine(_tempDir, "prefs-norm.json");
+        var prefs = new EditorPreferences(prefsPath);
+        prefs.SetToolPath("png", "C:\\tools\\aseprite.exe");
+
+        Assert.Equal("C:\\tools\\aseprite.exe", prefs.GetToolPathForFile("textures/suit.png"));
+        Assert.Equal("C:\\tools\\aseprite.exe", prefs.GetToolPathForFile("SUIT.PNG"));
+        Assert.Null(prefs.GetToolPathForFile("model.model"));
+    }
+
+    [Fact]
+    public void EditorPreferences_Load_NormalizesLegacyKeysWithoutDot()
+    {
+        string prefsPath = Path.Combine(_tempDir, "prefs-legacy.json");
+        File.WriteAllText(prefsPath, "{ \"material\": \"C:/tools/mat.exe\", \"PNG\": \"C:/tools/png.exe\" }");
+
+        var prefs = new EditorPreferences(prefsPath);
+
+        Assert.Equal("C:/tools/mat.exe", prefs.GetToolPathForFile("suit.material"));
+        Assert.Equal("C:/tools/png.exe", prefs.GetToolPathForFile("suit.png"));
+    }
+
+    [Fact]
+    public void EditorRegistry_UndoRedo_DispatchesToMatchingEditor()
+    {
+        var editor = new ConfigEditor();
+        var registry = new EditorRegistry();
+        registry.Register(editor);
+
+        string path = Path.Combine(_tempDir, "dispatch.config");
+        File.WriteAllText(path, "{\"v\":1}");
+        editor.Save(path, "{\"v\":2}");
+
+        Assert.True(registry.CanUndo(path));
+        Assert.False(registry.CanUndo("file.unknown"));
+
+        registry.Undo(path);
+        Assert.Contains("\"v\":1", File.ReadAllText(path));
+
+        registry.Redo(path);
+        Assert.Contains("\"v\": 2", File.ReadAllText(path));
+    }
+
+    [Fact]
+    public void EditorPreferences_PersistsToolPathsAcrossInstances()
+    {
+        string prefsPath = Path.Combine(_tempDir, "prefs-roundtrip.json");
+        var first = new EditorPreferences(prefsPath);
+        first.SetToolPath(".png", "C:/tools/aseprite.exe");
+
+        var second = new EditorPreferences(prefsPath);
+
+        Assert.Equal("C:/tools/aseprite.exe", second.GetToolPathForFile("textures/suit.png"));
+    }
+
+    [Fact]
+    public void EditorRegistry_LaunchExternalEditor_WithoutEditor_Throws()
+    {
+        var registry = new EditorRegistry();
+        Assert.Throws<NotSupportedException>(() => registry.LaunchExternalEditor("file.unknown"));
+    }
 }

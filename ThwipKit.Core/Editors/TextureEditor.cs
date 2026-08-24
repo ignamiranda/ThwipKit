@@ -10,6 +10,7 @@ public sealed class TextureEditor : IAssetEditor
 {
     private readonly ArchiveManager _archiveManager;
     private readonly AssetValidator _validator;
+    private readonly EditorPreferences? _preferences;
 
     public EditorCapabilities Capabilities { get; } = new()
     {
@@ -17,13 +18,15 @@ public sealed class TextureEditor : IAssetEditor
         FileExtensions = [".texture", ".dds", ".png"],
         CanEdit = true,
         CanValidate = true,
-        RequiresExternalTool = false
+        RequiresExternalTool = false,
+        SupportsUndo = false
     };
 
-    public TextureEditor(ArchiveManager archiveManager, GameBase game)
+    public TextureEditor(ArchiveManager archiveManager, GameBase game, EditorPreferences? preferences = null)
     {
         _archiveManager = archiveManager ?? throw new ArgumentNullException(nameof(archiveManager));
         _validator = new AssetValidator(game ?? throw new ArgumentNullException(nameof(game)));
+        _preferences = preferences;
     }
 
     public bool CanHandle(string filePath)
@@ -48,18 +51,41 @@ public sealed class TextureEditor : IAssetEditor
 
     public bool RestoreFromBackup(string gamePath, string textureName)
         => _archiveManager.RestoreTextureFromBackup(gamePath, textureName);
+
+    public bool CanUndo => false;
+
+    public void Undo()
+        => throw new NotSupportedException("Texture Editor does not support undo.");
+
+    public void Redo()
+        => throw new NotSupportedException("Texture Editor does not support redo.");
+
+    public int LaunchExternalEditor(string filePath)
+    {
+        string? toolPath = _preferences?.GetToolPathForFile(filePath);
+        return ExternalToolLauncher.Launch(toolPath ?? throw new NotSupportedException("No external tool configured for texture files."), filePath);
+    }
 }
 
 public sealed class ConfigEditor : IAssetEditor
 {
+    private readonly EditorPreferences? _preferences;
+    private readonly EditorUndoSupport _undo = new();
+
     public EditorCapabilities Capabilities { get; } = new()
     {
         EditorName = "Config Editor",
         FileExtensions = [".config", ".json"],
         CanEdit = true,
         CanValidate = true,
-        RequiresExternalTool = false
+        RequiresExternalTool = false,
+        SupportsUndo = true
     };
+
+    public ConfigEditor(EditorPreferences? preferences = null)
+    {
+        _preferences = preferences;
+    }
 
     public bool CanHandle(string filePath)
         => Path.GetExtension(filePath) is ".config" or ".json";
@@ -99,6 +125,20 @@ public sealed class ConfigEditor : IAssetEditor
         // Validate before writing so we never persist malformed JSON
         using JsonDocument doc = JsonDocument.Parse(jsonContent);
         string normalized = JsonSerializer.Serialize(doc.RootElement.Clone(), new JsonSerializerOptions { WriteIndented = true });
+
+        _undo.CaptureBeforeWrite(filePath);
         File.WriteAllText(filePath, normalized);
+    }
+
+    public bool CanUndo => _undo.CanUndo;
+
+    public void Undo() => _undo.Undo();
+
+    public void Redo() => _undo.Redo();
+
+    public int LaunchExternalEditor(string filePath)
+    {
+        string? toolPath = _preferences?.GetToolPathForFile(filePath);
+        return ExternalToolLauncher.Launch(toolPath ?? throw new NotSupportedException("No external tool configured for config files."), filePath);
     }
 }

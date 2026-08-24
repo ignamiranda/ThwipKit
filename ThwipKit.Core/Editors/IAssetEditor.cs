@@ -11,6 +11,7 @@ public sealed class EditorCapabilities
     public bool CanEdit { get; init; }
     public bool CanValidate { get; init; }
     public bool RequiresExternalTool { get; init; }
+    public bool SupportsUndo { get; init; }
 
     public bool HandlesExtension(string extension)
         => FileExtensions.Any(e => e.Equals(extension, StringComparison.OrdinalIgnoreCase));
@@ -23,6 +24,27 @@ public interface IAssetEditor
     bool CanHandle(string filePath);
 
     ValidationResult Validate(string filePath);
+
+    /// <summary>
+    /// Whether this editor currently has an undoable action available.
+    /// </summary>
+    bool CanUndo { get; }
+
+    /// <summary>
+    /// Reverts the most recent action, if any. Throws if <see cref="CanUndo"/> is false.
+    /// </summary>
+    void Undo();
+
+    /// <summary>
+    /// Redoes the most recent undone action, if any. Throws if no redo is available.
+    /// </summary>
+    void Redo();
+
+    /// <summary>
+    /// Launches the configured external tool for this file type.
+    /// Throws <see cref="NotSupportedException"/> when the editor has no external tool configured.
+    /// </summary>
+    int LaunchExternalEditor(string filePath);
 }
 
 public sealed class ValidationResult

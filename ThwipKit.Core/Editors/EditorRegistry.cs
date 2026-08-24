@@ -25,20 +25,48 @@ public sealed class EditorPreferences
     public string? GetToolPath(string editorKey)
         => _toolPaths.TryGetValue(editorKey, out string? path) ? path : null;
 
+    /// <summary>
+    /// Resolves the tool path for a file's extension, normalizing the key
+    /// (with or without a leading dot, case-insensitive).
+    /// </summary>
+    public string? GetToolPathForFile(string filePath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
+        string extension = Path.GetExtension(filePath);
+        return GetToolPath(extension);
+    }
+
+    /// <summary>
+    /// Returns all file extensions that have a configured tool path.
+    /// </summary>
+    public IEnumerable<string> GetSupportedFileTypes()
+        => _toolPaths.Keys.OrderBy(k => k);
+
     public void SetToolPath(string editorKey, string toolPath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(editorKey);
         ArgumentException.ThrowIfNullOrWhiteSpace(toolPath);
-        _toolPaths[editorKey] = toolPath;
+        _toolPaths[NormalizeExtension(editorKey)] = toolPath;
         Save();
     }
 
     public void RemoveToolPath(string editorKey)
     {
-        if (_toolPaths.Remove(editorKey))
+        if (_toolPaths.Remove(NormalizeExtension(editorKey)))
         {
             Save();
         }
+    }
+
+    private static string NormalizeExtension(string key)
+    {
+        string k = key.Trim();
+        if (k.Length == 0)
+        {
+            return k;
+        }
+
+        return k.StartsWith('.') ? k.ToLowerInvariant() : "." + k.ToLowerInvariant();
     }
 
     private void Load()
@@ -50,7 +78,11 @@ public sealed class EditorPreferences
                 var loaded = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(_settingsFilePath));
                 if (loaded != null)
                 {
-                    _toolPaths = new Dictionary<string, string>(loaded, StringComparer.OrdinalIgnoreCase);
+                    _toolPaths = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    foreach (KeyValuePair<string, string> kvp in loaded)
+                    {
+                        _toolPaths[NormalizeExtension(kvp.Key)] = kvp.Value;
+                    }
                 }
             }
         }
@@ -105,5 +137,32 @@ public sealed class EditorRegistry
         }
 
         return editor.Validate(filePath);
+    }
+
+    public bool CanUndo(string filePath)
+        => FindEditor(filePath)?.CanUndo ?? false;
+
+    public void Undo(string filePath)
+    {
+        IAssetEditor? editor = FindEditor(filePath)
+            ?? throw new NotSupportedException($"No editor registered for '{Path.GetExtension(filePath)}'");
+
+        editor.Undo();
+    }
+
+    public void Redo(string filePath)
+    {
+        IAssetEditor? editor = FindEditor(filePath)
+            ?? throw new NotSupportedException($"No editor registered for '{Path.GetExtension(filePath)}'");
+
+        editor.Redo();
+    }
+
+    public int LaunchExternalEditor(string filePath)
+    {
+        IAssetEditor? editor = FindEditor(filePath)
+            ?? throw new NotSupportedException($"No editor registered for '{Path.GetExtension(filePath)}'");
+
+        return editor.LaunchExternalEditor(filePath);
     }
 }
