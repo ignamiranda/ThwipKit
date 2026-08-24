@@ -148,3 +148,10 @@ start_out.txt
 
 # Temporary test projects
 test_toc/
+# git worktrees (isolated agent lanes)
+.worktrees/
+
+
+# Git worktrees (isolated agent workspaces)
+.worktrees/
+
