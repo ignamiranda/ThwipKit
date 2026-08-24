@@ -47,6 +47,29 @@ public sealed class AssetBrowserViewModelTests
         Assert.Equal(3, viewModel.AssetsView.Cast<AssetInfo>().Count());
     }
 
+    [Fact]
+    public void TypeFilterNarrowsVisibleAssets()
+    {
+        var viewModel = CreateViewModel();
+        viewModel.LoadAssets();
+
+        viewModel.SelectedType = ThwipKit.Core.Staging.AssetType.Texture;
+
+        Assert.Single(viewModel.AssetsView.Cast<AssetInfo>());
+        Assert.Equal("characters/hero.texture", viewModel.AssetsView.Cast<AssetInfo>().Single().ResolvedName);
+    }
+
+    [Fact]
+    public void OrSearchMatchesEitherTerm()
+    {
+        var viewModel = CreateViewModel();
+        viewModel.LoadAssets();
+
+        viewModel.SearchText = "hero OR material";
+
+        Assert.Equal(2, viewModel.AssetsView.Cast<AssetInfo>().Count());
+    }
+
     private static AssetBrowserViewModel CreateViewModel()
     {
         AssetInfo[] assets =
@@ -61,5 +84,8 @@ public sealed class AssetBrowserViewModelTests
     private sealed class StubAssetBrowserService(IReadOnlyList<AssetInfo> assets) : IAssetBrowserService
     {
         public IReadOnlyList<AssetInfo> GetAllAssets(string gamePath) => assets;
+        public void ExtractAsset(AssetInfo asset, string gamePath) { }
+        public void ReplaceAsset(AssetInfo asset, string gamePath, string replacementFilePath) { }
+        public void OpenAsset(AssetInfo asset, string gamePath) { }
     }
 }

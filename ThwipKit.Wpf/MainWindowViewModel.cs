@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows.Input;
+using ThwipKit.Core;
 using ThwipKit.Core.Assets;
 using ThwipKit.Core.Games;
 using ThwipKit.Wpf.Mvvm;
@@ -13,6 +14,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _gamePath = string.Empty;
     private int _assetCount;
     private string _statusMessage = "Select a game directory to begin.";
+    private readonly string _projectRoot = AppSettings.GetSettingsDirectory();
     private AssetBrowserViewModel? _assetBrowser;
 
     public MainWindowViewModel()
@@ -63,7 +65,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         {
             GameBase game = GameFactory.CreateGameFromPath(gamePath);
             var browser = new AssetBrowser(game);
-            var assetBrowser = new AssetBrowserViewModel(new AssetBrowserService(browser), gamePath);
+            var assetBrowser = new AssetBrowserViewModel(new AssetBrowserService(browser, game, _projectRoot), gamePath);
             AssetBrowser = assetBrowser;
             GamePath = gamePath;
             StatusMessage = $"Loading {game.DisplayName} assets...";

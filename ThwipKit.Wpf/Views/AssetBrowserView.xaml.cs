@@ -18,4 +18,12 @@ public partial class AssetBrowserView : UserControl
             viewModel.SelectArchive(e.NewValue as ArchiveTreeNode);
         }
     }
+
+    private void AssetGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (DataContext is AssetBrowserViewModel viewModel && viewModel.SelectedAsset is not null)
+        {
+            viewModel.JumpToAsset(viewModel.SelectedAsset);
+        }
+    }
 }

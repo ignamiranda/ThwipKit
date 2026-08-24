@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using ThwipKit.Core.Staging;
 using ThwipKit.Core.Games;
 using ThwipKit.Core.Sections;
 
@@ -35,6 +36,8 @@ public class AssetCatalog
             {
                 asset.ResolvedName = resolvedName;
             }
+
+            asset.Type = AssetClassifier.Classify(asset);
         }
 
         return assets;
