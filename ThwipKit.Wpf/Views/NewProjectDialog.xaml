@@ -8,6 +8,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
@@ -19,7 +20,10 @@
         <Label Grid.Row="0" Grid.Column="0" Content="Name" VerticalAlignment="Center" />
         <TextBox Grid.Row="0" Grid.Column="1" x:Name="NameBox" Margin="4" />
 
-        <Label Grid.Row="1" Grid.Column="0" Content="Target game" VerticalAlignment="Center" />
+        <Label Grid.Row="1" Grid.Column="0" Content="Template" VerticalAlignment="Center" />
+        <ComboBox Grid.Row="1" Grid.Column="1" x:Name="TemplateBox" Margin="4" SelectionChanged="TemplateBox_SelectionChanged" />
+
+        <Label Grid.Row="2" Grid.Column="0" Content="Target game" VerticalAlignment="Center" />
         <ComboBox Grid.Row="1" Grid.Column="1" x:Name="GameBox" Margin="4" SelectedIndex="0">
             <ComboBoxItem Content="MSMR" />
             <ComboBoxItem Content="MM" />
@@ -29,13 +33,13 @@
             <ComboBoxItem Content="I33" />
         </ComboBox>
 
-        <Label Grid.Row="2" Grid.Column="0" Content="Game version" VerticalAlignment="Center" />
-        <TextBox Grid.Row="2" Grid.Column="1" x:Name="VersionBox" Margin="4" />
+        <Label Grid.Row="3" Grid.Column="0" Content="Game version" VerticalAlignment="Center" />
+        <TextBox Grid.Row="3" Grid.Column="1" x:Name="VersionBox" Margin="4" />
 
-        <Label Grid.Row="3" Grid.Column="0" Content="Description" VerticalAlignment="Center" />
-        <TextBox Grid.Row="3" Grid.Column="1" x:Name="DescriptionBox" Margin="4" Height="48" TextWrapping="Wrap" AcceptsReturn="True" />
+        <Label Grid.Row="4" Grid.Column="0" Content="Description" VerticalAlignment="Center" />
+        <TextBox Grid.Row="4" Grid.Column="1" x:Name="DescriptionBox" Margin="4" Height="48" TextWrapping="Wrap" AcceptsReturn="True" />
 
-        <StackPanel Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right">
+        <StackPanel Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="Create" Width="80" Margin="4" IsDefault="True" Click="Create_Click" />
             <Button Content="Cancel" Width="80" Margin="4" IsCancel="True" />
         </StackPanel>

@@ -236,4 +236,37 @@ public class ProjectManagerTests : IDisposable
         Assert.False(_projectManager.IsOpen);
         Assert.Null(_projectManager.GetTrackedAsset(0x1));
     }
+
+    [Fact]
+    public void EditorSettings_PersistAndRestore()
+    {
+        _projectManager.CreateProject("Editors");
+        _projectManager.OpenProject("Editors");
+
+        _projectManager.SetEditorSetting("texture.compression", "BC7");
+        _projectManager.SetEditorSetting("model.converter", "quickbms");
+        Assert.Equal("BC7", _projectManager.GetEditorSetting("texture.compression"));
+        Assert.True(_projectManager.IsDirty);
+
+        _projectManager.Save();
+
+        var reloaded = new ProjectManager(
+            new StageManager(_game, Path.Combine(_tempDir, "stage")),
+            new AssetBrowser(_game),
+            _projectsRoot);
+        reloaded.OpenProject("Editors");
+        Assert.Equal("BC7", reloaded.GetEditorSetting("texture.compression"));
+        Assert.Equal("quickbms", reloaded.GetEditorSetting("model.converter"));
+    }
+
+    [Fact]
+    public void CreateProjectFromTemplate_AppliesDefaults()
+    {
+        ProjectTemplate template = ProjectTemplates.Find("Suit Mod")!;
+        _projectManager.CreateProjectFromTemplate("SuitProject", template);
+        Assert.True(_projectManager.IsOpen);
+        Assert.Equal("SuitProject", _projectManager.CurrentName);
+        Assert.Equal("MSMR", _projectManager.Current.Metadata.TargetGame);
+        Assert.Equal("spidermod", _projectManager.Current.Metadata.ModFormat);
+    }
 }

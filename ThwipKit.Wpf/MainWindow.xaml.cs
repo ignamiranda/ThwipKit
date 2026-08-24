@@ -38,7 +38,7 @@ public partial class MainWindow : Window
         var dialog = new NewProjectDialog { Owner = this };
         if (dialog.ShowDialog() == true)
         {
-            pm.CreateProject(dialog.ProjectName, dialog.TargetGame, dialog.Description, dialog.GameVersion);
+            pm.CreateProject(dialog.ProjectName, dialog.TargetGame, dialog.Description, dialog.GameVersion, dialog.ModFormat);
         }
     }
 

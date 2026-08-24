@@ -53,6 +53,12 @@ public class ProjectReference
     public bool Enabled { get; set; } = true;
 }
 
+public class EditorSetting
+{
+    public string Key { get; set; } = string.Empty;
+    public string Value { get; set; } = string.Empty;
+}
+
 public class ModProject
 {
     public int SchemaVersion { get; set; } = 1;
@@ -60,4 +66,5 @@ public class ModProject
     public ProjectMetadata Metadata { get; set; } = new();
     public List<TrackedAsset> Assets { get; set; } = new();
     public List<ProjectReference> References { get; set; } = new();
+    public List<EditorSetting> EditorSettings { get; set; } = new();
 }

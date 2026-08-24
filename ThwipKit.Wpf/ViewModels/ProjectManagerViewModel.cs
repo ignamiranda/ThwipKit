@@ -105,9 +105,11 @@ public sealed class ProjectManagerViewModel : ViewModelBase
         RefreshCommands();
     }
 
-    public void CreateProject(string name, string targetGame, string description, string gameVersion)
+    public void CreateProject(string name, string targetGame, string description, string gameVersion, string modFormat = "spidermod")
     {
         _manager.CreateProject(name, targetGame, description, gameVersion);
+        _manager.OpenProject(name);
+        _manager.UpdateMetadata(modFormat: modFormat);
         _recents.Add(_manager.GetProjectFilePath(name));
         SyncRecent();
         StatusMessage = $"Created project '{name}'.";

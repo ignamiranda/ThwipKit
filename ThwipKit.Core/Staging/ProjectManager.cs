@@ -120,6 +120,20 @@ public sealed class ProjectManager : IProjectTracker
         ProjectSerializer.Save(GetProjectFilePath(projectName), project);
     }
 
+    public void CreateProjectFromTemplate(string projectName, ProjectTemplate template)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(projectName);
+        ArgumentNullException.ThrowIfNull(template);
+
+        CreateProject(projectName, template.TargetGame, template.Description, string.Empty);
+        OpenProject(projectName);
+        UpdateMetadata(targetGame: template.TargetGame, modFormat: template.ModFormat);
+        if (!string.IsNullOrWhiteSpace(template.Author))
+        {
+            UpdateMetadata(name: projectName);
+        }
+    }
+
     public void OpenProject(string projectName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(projectName);
@@ -197,6 +211,38 @@ public sealed class ProjectManager : IProjectTracker
         _current.Metadata.ModifiedUtc = DateTime.UtcNow;
 
         _isDirty = true;
+        Raise(ProjectChangeKind.MetadataChanged);
+    }
+
+    public string? GetEditorSetting(string key)
+    {
+        if (_current == null)
+        {
+            throw new InvalidOperationException("No project is currently open.");
+        }
+
+        return _current.EditorSettings.FirstOrDefault(s => s.Key == key)?.Value;
+    }
+
+    public void SetEditorSetting(string key, string value)
+    {
+        if (_current == null)
+        {
+            throw new InvalidOperationException("No project is currently open.");
+        }
+
+        EditorSetting? existing = _current.EditorSettings.FirstOrDefault(s => s.Key == key);
+        if (existing != null)
+        {
+            existing.Value = value;
+        }
+        else
+        {
+            _current.EditorSettings.Add(new EditorSetting { Key = key, Value = value });
+        }
+
+        _isDirty = true;
+        _current.Metadata.ModifiedUtc = DateTime.UtcNow;
         Raise(ProjectChangeKind.MetadataChanged);
     }
 
