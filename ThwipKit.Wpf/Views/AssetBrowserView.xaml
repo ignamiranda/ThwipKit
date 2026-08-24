@@ -73,6 +73,7 @@
                     <MenuItem Header="Extract" Command="{Binding ExtractCommand}" />
                     <MenuItem Header="Replace..." Command="{Binding ReplaceCommand}" />
                     <MenuItem Header="Open" Command="{Binding OpenCommand}" />
+                    <MenuItem Header="Copy reference" Command="{Binding CopyReferenceCommand}" />
                 </ContextMenu>
             </DataGrid.ContextMenu>
         </DataGrid>

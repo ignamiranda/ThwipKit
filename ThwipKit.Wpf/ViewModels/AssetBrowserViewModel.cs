@@ -53,6 +53,7 @@ public sealed class AssetBrowserViewModel : ViewModelBase
         ExtractCommand = new RelayCommand(_ => ExtractSelected(), _ => CanActOnSelected());
         ReplaceCommand = new RelayCommand(_ => ReplaceSelected(), _ => CanActOnSelected());
         OpenCommand = new RelayCommand(_ => OpenSelected(), _ => CanActOnSelected());
+        CopyReferenceCommand = new RelayCommand(_ => CopyReference(), _ => CanActOnSelected());
         ApplyPresetCommand = new RelayCommand(param => ApplyPreset((FilterPreset)param!));
         DeletePresetCommand = new RelayCommand(param => DeletePreset((FilterPreset)param!));
         SavePresetCommand = new RelayCommand(_ => SavePreset(NewPresetName));
@@ -170,6 +171,7 @@ public sealed class AssetBrowserViewModel : ViewModelBase
     public ICommand ExtractCommand { get; }
     public ICommand ReplaceCommand { get; }
     public ICommand OpenCommand { get; }
+    public ICommand CopyReferenceCommand { get; }
     public ICommand ApplyPresetCommand { get; }
     public ICommand DeletePresetCommand { get; }
     public ICommand SavePresetCommand { get; }
@@ -351,6 +353,23 @@ public sealed class AssetBrowserViewModel : ViewModelBase
         if (SelectedAsset is { } asset)
         {
             _browser.OpenAsset(asset, _gamePath);
+        }
+    }
+
+    private void CopyReference()
+    {
+        if (SelectedAsset is not { } asset)
+        {
+            return;
+        }
+
+        string reference = asset.ResolvedName is not null
+            ? $"{asset.ResolvedName} ({asset.AssetIdHex})"
+            : asset.AssetIdHex;
+
+        if (Application.Current is not null)
+        {
+            Clipboard.SetText(reference);
         }
     }
 
