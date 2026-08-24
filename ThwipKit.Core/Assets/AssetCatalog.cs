@@ -47,6 +47,10 @@ public class AssetCatalog
             {
                 string archivePath = Path.Combine(gamePath, archiveDirectory, asset.ArchiveName);
                 asset.Compression = archiveManager.GetCompressionFormat(archivePath, asset.Offset, asset.Size);
+                if (File.Exists(archivePath))
+                {
+                    asset.LastModified = File.GetLastWriteTimeUtc(archivePath);
+                }
             }
             catch (Exception)
             {

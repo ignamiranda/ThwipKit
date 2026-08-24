@@ -90,6 +90,8 @@
                     <TextBlock Margin="0,2,0,14" Foreground="#FFF1F5F8" Text="{Binding Type}" />
                     <TextBlock Foreground="#FF8C98A5" Text="Compression" />
                     <TextBlock Margin="0,2,0,14" Foreground="#FFF1F5F8" Text="{Binding Compression, TargetNullValue='—'}" />
+                    <TextBlock Foreground="#FF8C98A5" Text="Last modified" />
+                    <TextBlock Margin="0,2,0,14" Foreground="#FFF1F5F8" Text="{Binding LastModified, StringFormat={}{0:u}, TargetNullValue='—'}" />
                     <TextBlock Foreground="#FF8C98A5" Text="Size (bytes)" />
                     <TextBlock Margin="0,2,0,14" Foreground="#FFF1F5F8" Text="{Binding Size, StringFormat={}{0:N0}}" />
                     <TextBlock Foreground="#FF8C98A5" Text="Archive offset" />
