@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using ThwipKit.Core;
+using ThwipKit.Core.Hashing;
 using ThwipKit.Core.Staging;
 using ThwipKit.Core.Games;
 using ThwipKit.Core.Sections;
@@ -50,6 +51,12 @@ public class AssetCatalog
                 if (File.Exists(archivePath))
                 {
                     asset.LastModified = File.GetLastWriteTimeUtc(archivePath);
+                    byte[]? assetData = archiveManager.GetAssetData(archivePath, asset.Offset, asset.Size);
+                    if (assetData is not null)
+                    {
+                        asset.Crc32 = Crc32.Compute(assetData);
+                        asset.Crc64 = Crc64.Compute(assetData);
+                    }
                 }
             }
             catch (Exception)

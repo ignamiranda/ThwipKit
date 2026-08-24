@@ -301,6 +301,27 @@ namespace ThwipKit.Core
             return null;
         }
 
+        /// <summary>
+        /// Reads and decompresses the asset bytes for the region [offset, offset + size) in the
+        /// given archive. Returns null when the archive is missing or is not a DSAR file.
+        /// </summary>
+        public byte[]? GetAssetData(string archivePath, uint offset, uint size)
+        {
+            if (string.IsNullOrWhiteSpace(archivePath) || !File.Exists(archivePath))
+            {
+                return null;
+            }
+
+            try
+            {
+                return ReadFromDsar(archivePath, offset, size);
+            }
+            catch (InvalidDataException)
+            {
+                return null;
+            }
+        }
+
         private static List<DsarBlockHeader> ReadDsarBlocks(string archivePath)
         {
             using FileStream fs = new FileStream(archivePath, FileMode.Open, FileAccess.Read);

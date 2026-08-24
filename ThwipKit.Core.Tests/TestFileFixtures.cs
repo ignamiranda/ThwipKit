@@ -129,6 +129,38 @@ internal static class TestFileFixtures
         writer.Write(new byte[100]);
     }
 
+    /// <summary>
+    /// Creates a single-block DSAR archive whose block covers [realOffset, realOffset + assetData.Length)
+    /// and stores the raw asset bytes uncompressed (compressionType defaults to 0/None). The data sits
+    /// immediately after the block table so decompression returns exactly assetData.
+    /// </summary>
+    public static void CreateDsarFile(string path, byte[] assetData, uint realOffset, byte compressionType = 0)
+    {
+        const int headerSize = 4 + 4 + 4 + 4 + 8 + 8; // 32
+        const int blockSize = 4 + 4 + 4 + 4 + 4 + 4 + 1 + 7; // 32
+        uint compressedOffset = (uint)(headerSize + blockSize);
+
+        using var file = File.Create(path);
+        using var writer = new BinaryWriter(file, Encoding.UTF8, true);
+        writer.Write(new byte[] { (byte)'D', (byte)'S', (byte)'A', (byte)'R' });
+        writer.Write(1U);
+        writer.Write(1U);
+        writer.Write(0U);
+        writer.Write(0UL);
+        writer.Write(new byte[8]);
+
+        writer.Write(realOffset);
+        writer.Write(0U);
+        writer.Write(compressedOffset);
+        writer.Write(0U);
+        writer.Write((uint)assetData.Length);
+        writer.Write((uint)assetData.Length);
+        writer.Write(compressionType);
+        writer.Write(new byte[7]);
+
+        writer.Write(assetData);
+    }
+
     public static byte[] Combine(params byte[][] arrays)
     {
         return arrays.SelectMany(array => array).ToArray();

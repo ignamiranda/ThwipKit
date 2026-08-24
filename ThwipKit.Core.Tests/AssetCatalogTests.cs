@@ -1,8 +1,10 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using ThwipKit.Core.Assets;
 using ThwipKit.Core.GameDefinitions;
 using ThwipKit.Core.Games;
+using ThwipKit.Core.Hashing;
 using Xunit;
 
 namespace ThwipKit.Core.Tests;
@@ -80,6 +82,38 @@ public class AssetCatalogTests : IDisposable
         Assert.Equal(456U, asset.Offset);
         Assert.Equal("Archive0", asset.ArchiveName);
         Assert.Equal(0U, asset.ArchiveIndex);
+    }
+
+    [Fact]
+    public void GetAssetsPopulatesCrcFromDecompressedAssetData()
+    {
+        byte[] assetData = Enumerable.Range(0, 123).Select(i => (byte)(i * 7)).ToArray();
+        TestFileFixtures.CreateDsarFile(
+            Path.Combine(_assetArchivePath, "Archive0"),
+            assetData,
+            realOffset: 456,
+            compressionType: 0);
+
+        var catalog = new AssetCatalog(CreateTestGame());
+
+        AssetInfo asset = Assert.Single(catalog.GetAssets(_gamePath));
+
+        Assert.Equal(CompressionFormat.None, asset.Compression);
+        Assert.Equal(Crc32.Compute(assetData), asset.Crc32);
+        Assert.Equal(Crc64.Compute(assetData), asset.Crc64);
+        Assert.Equal($"0x{Crc32.Compute(assetData):X8}", asset.Crc32Hex);
+        Assert.Equal($"0x{Crc64.Compute(assetData):X16}", asset.Crc64Hex);
+    }
+
+    [Fact]
+    public void GetAssetsLeavesCrcNullWhenArchiveMissing()
+    {
+        var catalog = new AssetCatalog(CreateTestGame());
+
+        AssetInfo asset = Assert.Single(catalog.GetAssets(_gamePath));
+
+        Assert.Null(asset.Crc32);
+        Assert.Null(asset.Crc64);
     }
 
     [Fact]
