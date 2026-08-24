@@ -1,0 +1,43 @@
+<Window x:Class="ThwipKit.Wpf.Views.NewProjectDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="New Project" Height="260" Width="420" WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <Label Grid.Row="0" Grid.Column="0" Content="Name" VerticalAlignment="Center" />
+        <TextBox Grid.Row="0" Grid.Column="1" x:Name="NameBox" Margin="4" />
+
+        <Label Grid.Row="1" Grid.Column="0" Content="Target game" VerticalAlignment="Center" />
+        <ComboBox Grid.Row="1" Grid.Column="1" x:Name="GameBox" Margin="4" SelectedIndex="0">
+            <ComboBoxItem Content="MSMR" />
+            <ComboBoxItem Content="MM" />
+            <ComboBoxItem Content="MSM2" />
+            <ComboBoxItem Content="RCRA" />
+            <ComboBoxItem Content="I30" />
+            <ComboBoxItem Content="I33" />
+        </ComboBox>
+
+        <Label Grid.Row="2" Grid.Column="0" Content="Game version" VerticalAlignment="Center" />
+        <TextBox Grid.Row="2" Grid.Column="1" x:Name="VersionBox" Margin="4" />
+
+        <Label Grid.Row="3" Grid.Column="0" Content="Description" VerticalAlignment="Center" />
+        <TextBox Grid.Row="3" Grid.Column="1" x:Name="DescriptionBox" Margin="4" Height="48" TextWrapping="Wrap" AcceptsReturn="True" />
+
+        <StackPanel Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="Create" Width="80" Margin="4" IsDefault="True" Click="Create_Click" />
+            <Button Content="Cancel" Width="80" Margin="4" IsCancel="True" />
+        </StackPanel>
+    </Grid>
+</Window>

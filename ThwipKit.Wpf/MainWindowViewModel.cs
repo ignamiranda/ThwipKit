@@ -3,6 +3,7 @@ using System.Windows.Input;
 using ThwipKit.Core;
 using ThwipKit.Core.Assets;
 using ThwipKit.Core.Games;
+using ThwipKit.Core.Staging;
 using ThwipKit.Wpf.Mvvm;
 using ThwipKit.Wpf.Services;
 using ThwipKit.Wpf.ViewModels;
@@ -16,10 +17,17 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _statusMessage = "Select a game directory to begin.";
     private readonly string _projectRoot = AppSettings.GetSettingsDirectory();
     private AssetBrowserViewModel? _assetBrowser;
+    private ProjectManagerViewModel? _projectManager;
 
     public MainWindowViewModel()
     {
         DetectGameCommand = new AsyncRelayCommand(parameter => DetectGameAsync(parameter as string));
+    }
+
+    public ProjectManagerViewModel? ProjectManager
+    {
+        get => _projectManager;
+        private set => SetProperty(ref _projectManager, value);
     }
 
     public string GamePath
@@ -65,7 +73,16 @@ public sealed class MainWindowViewModel : ViewModelBase
         {
             GameBase game = GameFactory.CreateGameFromPath(gamePath);
             var browser = new AssetBrowser(game);
-            var assetBrowser = new AssetBrowserViewModel(new AssetBrowserService(browser, game, _projectRoot), gamePath);
+            var stageManager = new StageManager(game, _projectRoot);
+            var projectManagerVm = new ProjectManagerViewModel(
+                stageManager,
+                browser,
+                Path.Combine(_projectRoot, "projects"));
+            projectManagerVm.AttachGame(game, gamePath);
+            var assetBrowser = new AssetBrowserViewModel(
+                new AssetBrowserService(browser, game, _projectRoot, projectManagerVm.Sink),
+                gamePath);
+            ProjectManager = projectManagerVm;
             AssetBrowser = assetBrowser;
             GamePath = gamePath;
             StatusMessage = $"Loading {game.DisplayName} assets...";

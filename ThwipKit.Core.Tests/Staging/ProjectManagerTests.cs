@@ -191,4 +191,49 @@ public class ProjectManagerTests : IDisposable
         reloaded.OpenProject("CloseMe");
         Assert.NotEqual("lost if not saved", reloaded.Current.Metadata.Description);
     }
+
+    [Fact]
+    public void SinkBridge_RecordsExtractionThroughTracker()
+    {
+        _projectManager.CreateProject("Sink");
+        _projectManager.OpenProject("Sink");
+
+        var sink = new ProjectTrackingSink(_projectManager);
+        var info = new AssetInfo
+        {
+            AssetId = 0xABCD,
+            ResolvedName = "env/rock.texture",
+            ArchiveName = "asset_archive",
+            Offset = 10,
+            Size = 20,
+            Type = AssetType.Texture
+        };
+
+        sink.OnAssetExtracted(0xABCD, "TEST/textures/env/rock.texture", info);
+
+        TrackedAsset? asset = _projectManager.GetTrackedAsset(0xABCD);
+        Assert.NotNull(asset);
+        Assert.Equal(TrackedAssetStatus.Extracted, asset!.Status);
+        Assert.Equal("TEST/textures/env/rock.texture", asset.RelativePath);
+    }
+
+    [Fact]
+    public void SinkBridge_NoOpenProject_IgnoresEvents()
+    {
+        var sink = new ProjectTrackingSink(_projectManager);
+        var info = new AssetInfo
+        {
+            AssetId = 0x1,
+            ResolvedName = "x",
+            ArchiveName = "asset_archive",
+            Offset = 1,
+            Size = 1,
+            Type = AssetType.Texture
+        };
+
+        sink.OnAssetExtracted(0x1, "rel", info);
+
+        Assert.False(_projectManager.IsOpen);
+        Assert.Null(_projectManager.GetTrackedAsset(0x1));
+    }
 }
