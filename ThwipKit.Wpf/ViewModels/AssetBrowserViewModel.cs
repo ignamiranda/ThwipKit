@@ -20,6 +20,13 @@ public enum AssetSection
     Audio
 }
 
+public enum InternalTargetFilter
+{
+    All,
+    InternalTargetsOnly,
+    NonInternalTargetsOnly
+}
+
 public sealed record FilterPreset(string Name, string? SearchText, AssetType? Type, string? Archive, AssetSection Section);
 
 public sealed class AssetBrowserViewModel : ViewModelBase
@@ -32,6 +39,7 @@ public sealed class AssetBrowserViewModel : ViewModelBase
     private string? _selectedArchive;
     private AssetType? _selectedType;
     private AssetSection _selectedSection = AssetSection.All;
+    private InternalTargetFilter _selectedInternalTargetFilter = InternalTargetFilter.All;
     private bool _isLoading;
     private string _newPresetName = string.Empty;
     private FilterPreset? _selectedPreset;
@@ -72,6 +80,12 @@ public sealed class AssetBrowserViewModel : ViewModelBase
     public ObservableCollection<AssetType> Types { get; }
     public ObservableCollection<string> RecentSearches { get; }
     public ObservableCollection<FilterPreset> FilterPresets { get; }
+    public ObservableCollection<InternalTargetFilter> InternalTargetFilters { get; } = new()
+    {
+        InternalTargetFilter.All,
+        InternalTargetFilter.InternalTargetsOnly,
+        InternalTargetFilter.NonInternalTargetsOnly
+    };
 
     public AssetInfo? SelectedAsset
     {
@@ -150,6 +164,18 @@ public sealed class AssetBrowserViewModel : ViewModelBase
     {
         get => _isLoading;
         private set => SetProperty(ref _isLoading, value);
+    }
+
+    public InternalTargetFilter SelectedInternalTargetFilter
+    {
+        get => _selectedInternalTargetFilter;
+        set
+        {
+            if (SetProperty(ref _selectedInternalTargetFilter, value))
+            {
+                AssetsView.Refresh();
+            }
+        }
     }
 
     public string NewPresetName
@@ -412,9 +438,16 @@ public sealed class AssetBrowserViewModel : ViewModelBase
             || string.Equals(asset.ArchiveName, SelectedArchive, StringComparison.OrdinalIgnoreCase);
         bool typeMatches = !SelectedType.HasValue || asset.Type == SelectedType.Value;
 
+        bool internalTargetMatches = _selectedInternalTargetFilter switch
+        {
+            InternalTargetFilter.InternalTargetsOnly => asset.IsInternalTarget,
+            InternalTargetFilter.NonInternalTargetsOnly => !asset.IsInternalTarget,
+            _ => true
+        };
+
         bool searchMatches = _searchPredicate is null || string.IsNullOrWhiteSpace(SearchText) || _searchPredicate(asset);
 
-        return sectionMatches && archiveMatches && typeMatches && searchMatches;
+        return sectionMatches && archiveMatches && typeMatches && internalTargetMatches && searchMatches;
     }
 
     private void RefreshNow()
@@ -429,6 +462,7 @@ public sealed class AssetBrowserViewModel : ViewModelBase
         SelectedArchive = null;
         SelectedType = null;
         SelectedSection = AssetSection.All;
+        SelectedInternalTargetFilter = InternalTargetFilter.All;
         RefreshNow();
     }
 

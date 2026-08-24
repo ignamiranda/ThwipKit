@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows.Input;
 using ThwipKit.Core;
@@ -16,11 +17,33 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _statusMessage = "Select a game directory to begin.";
     private readonly string _projectRoot = AppSettings.GetSettingsDirectory();
     private AssetBrowserViewModel? _assetBrowser;
+    private readonly Dictionary<string, string> _gameDirectories = [];
+    private GameDescriptor? _selectedGame;
 
     public MainWindowViewModel()
     {
         DetectGameCommand = new AsyncRelayCommand(parameter => DetectGameAsync(parameter as string));
+        SwitchGameCommand = new RelayCommand(_ => SwitchGame(), _ => CanSwitchGame());
+        LoadKnownGames();
     }
+
+    public ObservableCollection<GameDescriptor> KnownGames { get; } = new();
+
+    public GameDescriptor? SelectedGame
+    {
+        get => _selectedGame;
+        set
+        {
+            if (SetProperty(ref _selectedGame, value))
+            {
+                SwitchGameCommand?.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public bool CanSwitchGame => SelectedGame is not null && _gameDirectories.ContainsKey(SelectedGame.InternalId);
+
+    public ICommand SwitchGameCommand { get; }
 
     public string GamePath
     {
@@ -64,6 +87,13 @@ public sealed class MainWindowViewModel : ViewModelBase
         try
         {
             GameBase game = GameFactory.CreateGameFromPath(gamePath);
+            _gameDirectories[game.InternalId] = gamePath;
+            GameDescriptor? descriptor = KnownGames.FirstOrDefault(g => g.InternalId == game.InternalId);
+            if (SelectedGame != descriptor)
+            {
+                SelectedGame = descriptor;
+            }
+
             var browser = new AssetBrowser(game);
             var assetBrowser = new AssetBrowserViewModel(new AssetBrowserService(browser, game, _projectRoot), gamePath);
             AssetBrowser = assetBrowser;
@@ -78,4 +108,25 @@ public sealed class MainWindowViewModel : ViewModelBase
             StatusMessage = $"Could not load game: {exception.Message}";
         }
     }
+
+    private void LoadKnownGames()
+    {
+        KnownGames.Clear();
+        foreach (GameDefinition definition in GameDefinitionLoader.LoadBuiltInDefinitions())
+        {
+            KnownGames.Add(new GameDescriptor(definition.InternalId, definition.DisplayName, definition.IsInternalTarget));
+        }
+    }
+
+    private void SwitchGame()
+    {
+        if (SelectedGame is null || !_gameDirectories.TryGetValue(SelectedGame.InternalId, out string? directory))
+        {
+            return;
+        }
+
+        DetectGame(directory);
+    }
 }
+
+public sealed record GameDescriptor(string InternalId, string DisplayName, bool IsInternalTarget);

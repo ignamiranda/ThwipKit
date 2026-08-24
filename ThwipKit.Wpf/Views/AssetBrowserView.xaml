@@ -32,6 +32,9 @@
                 </ComboBox>
                 <ComboBox DockPanel.Dock="Right" Width="190" Margin="8,0,0,0" ItemsSource="{Binding ArchiveNames}"
                           SelectedItem="{Binding SelectedArchive}" ToolTip="Archive filter" />
+                <ComboBox DockPanel.Dock="Right" Width="170" Margin="8,0,0,0"
+                          ItemsSource="{Binding InternalTargetFilters}" SelectedItem="{Binding SelectedInternalTargetFilter}"
+                          ToolTip="Filter by internal target" />
                 <TextBox Padding="10,6" x:Name="SearchBox" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                          ToolTip="Search names or hexadecimal IDs (use AND/OR, e.g. 'hero OR material')">
                     <TextBox.InputBindings>
