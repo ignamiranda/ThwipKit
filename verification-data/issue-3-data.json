@@ -1,0 +1,21 @@
+{
+  "body": "## Question\n\nWhat are the legal and ethical considerations for creating and distributing a modding tool for Marvel's Spider-Man Remastered?\n\n**Branch:** `research/legal-considerations`\n\n## Type\n\nStatus: ready-for-agent\n\n## Resolution\n\nCreating a modding tool for Spider-Man Remastered involves significant legal considerations:\n- The game's EULA (via PlayStation ToS) prohibits modification, reverse engineering, and creating derivative works\n- Distributing tools that facilitate asset extraction may violate anti-circumvention laws (DMCA 1201) if they bypass protection mechanisms\n- All game assets remain copyrighted by Insomniac, Sony, Marvel, and their licensors\n- Client-side cosmetic mods (like texture changes) are often tolerated in practice if kept offline and not redistributing assets\n- The tool should include clear disclaimers for personal, offline use only and require users to own the game\n- Distribution platforms like NexusMods/ModDB will remove infringing content upon DMCA notice but don't provide legal protection\n\n## Context Pointer\n\nResearch findings inlined in this ticket's comment: https://github.com/ignamiranda/ThwipKit/issues/3#issuecomment-5401521775\n\n## Context\n\nWe need to understand the legal landscape around game modding to ensure our tool:\n- Doesn't facilitate illegal activities (piracy, cheating)\n- Respects the game's EULA and Terms of Service\n- Understands what modding is generally permitted vs. prohibited\n- Considers intellectual property rights of assets\n- Knows how to provide appropriate disclaimers and usage guidelines\n- Understands differences between personal use mods and distribution\r\n",
+  "comments": [
+    {
+      "author": {
+        "login": "ignamiranda"
+      },
+      "authorAssociation": "OWNER",
+      "body": "### Detailed Legal Findings\n\n**EFF Reverse Engineering FAQ** (summary):\n- Fair use may apply for reverse engineering for interoperability, but EULAs can waive fair use rights.\n- Key cases: Sega v. Accolade (fair use), Sony v. Connectix (fair use), Atari v. Nintendo (contract breach), Blizzard v. BnetD (EULA enforcement, DMCA violation).\n- DMCA anti-circumvention (1201) prohibits bypassing technical protection measures; narrow exceptions exist for interoperability, but are limited.\n- Trade secret law generally permits reverse engineering unless bound by NDA or contract.\n- Contract law: EULAs often forbid reverse engineering; violating them can lead to breach claims.\n- ECPA restricts packet interception; exceptions apply for service-provider activities.\n\n**Modding Community Practices**:\n- Overstrike (GPL-v3) and WebWorks (GPL-v3) openly license their code, encouraging sharing but requiring source disclosure.\n- NexusMods policy requires users to own the game and prohibits redistribution of copyrighted assets.\n- Community tolerates cosmetic mods for personal use; distribution of asset extraction tools can be risky.\n\n**Risk Mitigation Recommendations**:\n- Include clear disclaimer: tool for personal, offline use only; users must own a legal copy.\n- Avoid bundling any copyrighted assets; provide only conversion utilities.\n- Document that the tool does not facilitate piracy or cheating.\n- Consider implementing a no-distribution clause in the tool's license.\n- Provide guidance on DMCA safe-harbor for security research if applicable.\n\n**Conclusion**: While reverse engineering for interoperability can be defended under fair use, the game's EULA and DMCA anti-circumvention provisions present significant legal risk. Proper licensing, clear user warnings, and avoiding distribution of copyrighted assets are essential to mitigate liability.\n",
+      "createdAt": "2026-08-24T21:20:15Z",
+      "id": "IC_kwDOUDAH088AAAABQfSubw",
+      "includesCreatedEdit": false,
+      "isMinimized": false,
+      "minimizedReason": "",
+      "reactionGroups": [],
+      "url": "https://github.com/ignamiranda/ThwipKit/issues/3#issuecomment-5401521775",
+      "viewerDidAuthor": true
+    }
+  ],
+  "state": "CLOSED"
+}

@@ -125,6 +125,20 @@ public sealed class ReplacementService
         _stagedReplacements.Clear();
     }
 
+    public void ReplaceAsset(string gamePath, AssetInfo asset, string replacementFilePath)
+    {
+        if (!File.Exists(replacementFilePath))
+        {
+            throw new FileNotFoundException("Replacement file not found", replacementFilePath);
+        }
+
+        string archivePath = Path.Combine(gamePath, _game.ArchiveDirectory, asset.ArchiveName);
+        _backupSystem.CreateAssetBackup(archivePath, $"asset_{asset.AssetIdHex}");
+
+        byte[] replacementData = File.ReadAllBytes(replacementFilePath);
+        _archiveManager.WriteToDsar(archivePath, asset.Offset, asset.Size, replacementData);
+    }
+
     public PreviewResult PreviewReplacement(StagedReplacement replacement)
     {
         return new PreviewResult

@@ -1,3 +1,6 @@
+using ThwipKit.Core.Games;
+using ThwipKit.Core.Staging;
+
 namespace ThwipKit.Core.Assets;
 
 public sealed class AssetInfo
@@ -9,4 +12,10 @@ public sealed class AssetInfo
     public string ArchiveName { get; init; } = string.Empty;
     public uint ArchiveIndex { get; init; }
     public string? ResolvedName { get; set; }
+    public AssetType Type { get; set; } = AssetType.Unknown;
+    public CompressionFormat? Compression { get; set; }
+    public DateTime? LastModified { get; set; }
+
+    public bool IsUnknown => string.IsNullOrWhiteSpace(ResolvedName);
+    public bool IsAudio => Type == AssetType.Audio;
 }

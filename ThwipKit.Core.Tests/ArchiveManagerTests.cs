@@ -105,4 +105,24 @@ public class ArchiveManagerTests : IDisposable
         
         Assert.True(result);
     }
+
+    [Fact]
+    public void GetCompressionFormatReturnsDeclaredFormatForAssetRegion()
+    {
+        var manager = new ArchiveManager(CreateTestGame());
+
+        CompressionFormat? format = manager.GetCompressionFormat(_archivePath, 0, 123);
+
+        Assert.Equal(CompressionFormat.Lz4, format);
+    }
+
+    [Fact]
+    public void GetCompressionFormatReturnsNullWhenArchiveMissing()
+    {
+        var manager = new ArchiveManager(CreateTestGame());
+
+        CompressionFormat? format = manager.GetCompressionFormat(Path.Combine(_tempDir, "missing.dsar"), 0, 123);
+
+        Assert.Null(format);
+    }
 }

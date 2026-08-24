@@ -272,6 +272,77 @@ namespace ThwipKit.Core
             }
         }
 
+        /// <summary>
+        /// Reads the DSAR block table and returns the compression format declared for the
+        /// block covering the asset's region in the decompressed stream. Returns null when
+        /// the archive is not a DSAR file or no block covers the requested range.
+        /// </summary>
+        public CompressionFormat? GetCompressionFormat(string archivePath, uint offset, uint size)
+        {
+            if (string.IsNullOrWhiteSpace(archivePath) || !File.Exists(archivePath))
+            {
+                return null;
+            }
+
+            List<DsarBlockHeader> blocks = ReadDsarBlocks(archivePath);
+            uint assetEnd = offset + size;
+
+            foreach (DsarBlockHeader block in blocks)
+            {
+                uint blockStart = block.RealOffset;
+                uint blockEnd = blockStart + block.RealSize;
+
+                if (blockStart <= offset && offset < blockEnd)
+                {
+                    return ResolveDsarCompressionType(block.CompressionType);
+                }
+            }
+
+            return null;
+        }
+
+        private static List<DsarBlockHeader> ReadDsarBlocks(string archivePath)
+        {
+            using FileStream fs = new FileStream(archivePath, FileMode.Open, FileAccess.Read);
+            using BinaryReader reader = new BinaryReader(fs);
+
+            byte[] magic = reader.ReadBytes(4);
+            if (magic.Length < 4 || magic[0] != (byte)'D' || magic[1] != (byte)'S' || magic[2] != (byte)'A' || magic[3] != (byte)'R')
+            {
+                throw new InvalidDataException("Invalid DSAR file magic");
+            }
+
+            reader.ReadUInt32();
+            uint blockCount = reader.ReadUInt32();
+            reader.ReadUInt32();
+            reader.ReadUInt64();
+            reader.ReadBytes(8);
+
+            var blocks = new List<DsarBlockHeader>();
+            for (int i = 0; i < blockCount; i++)
+            {
+                uint realOffset = reader.ReadUInt32();
+                reader.ReadUInt32();
+                uint compressedOffset = reader.ReadUInt32();
+                reader.ReadUInt32();
+                uint realSize = reader.ReadUInt32();
+                uint compressedSize = reader.ReadUInt32();
+                byte compressionType = reader.ReadByte();
+                reader.ReadBytes(7);
+
+                blocks.Add(new DsarBlockHeader
+                {
+                    RealOffset = realOffset,
+                    CompressedOffset = compressedOffset,
+                    RealSize = realSize,
+                    CompressedSize = compressedSize,
+                    CompressionType = compressionType
+                });
+            }
+
+            return blocks;
+        }
+
         private bool SimulateTextureToPngConversion(byte[] textureData, string pngFilePath)
         {
             try
