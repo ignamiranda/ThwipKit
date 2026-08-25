@@ -16,6 +16,15 @@ public sealed class AssetInfo
     public CompressionFormat? Compression { get; set; }
     public DateTime? LastModified { get; set; }
     public bool IsInternalTarget { get; set; }
+    public uint? Crc32 { get; set; }
+    public ulong? Crc64 { get; set; }
+
+    public string? Crc32Hex => Crc32.HasValue ? $"0x{Crc32.Value:X8}" : null;
+    public string? Crc64Hex => Crc64.HasValue ? $"0x{Crc64.Value:X16}" : null;
+
+    public IReadOnlyList<string>? References { get; set; }
+    public IReadOnlyList<string>? Dependencies { get; set; }
+    public uint? UsageCount { get; set; }
 
     public bool IsUnknown => string.IsNullOrWhiteSpace(ResolvedName);
     public bool IsAudio => Type == AssetType.Audio;

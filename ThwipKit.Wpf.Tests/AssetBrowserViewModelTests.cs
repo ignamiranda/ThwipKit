@@ -131,6 +131,32 @@ public sealed class AssetBrowserViewModelTests
         Assert.Equal("characters/hero.texture", viewModel.AssetsView.Cast<AssetInfo>().Single().ResolvedName);
     }
 
+    public void SelectedAssetSurfacesPopulatedMetadata()
+    {
+        AssetInfo[] assets =
+        [
+            new()
+            {
+                AssetId = 1,
+                ArchiveName = "ArchiveA",
+                Offset = 10,
+                Size = 1024,
+                ResolvedName = "characters/hero.texture",
+                Compression = ThwipKit.Core.Games.CompressionFormat.Lz4,
+                Crc32 = 0xCBF43926u,
+                Crc64 = 0x995DC9BBDF1939FAul
+            }
+        ];
+        var viewModel = new AssetBrowserViewModel(new StubAssetBrowserService(assets), "game");
+        viewModel.LoadAssets();
+
+        viewModel.SelectedAsset = viewModel.Assets[0];
+
+        Assert.Equal(ThwipKit.Core.Games.CompressionFormat.Lz4, viewModel.SelectedAsset.Compression);
+        Assert.Equal("0xCBF43926", viewModel.SelectedAsset.Crc32Hex);
+        Assert.Equal("0x995DC9BBDF1939FA", viewModel.SelectedAsset.Crc64Hex);
+    }
+
     private static AssetBrowserViewModel CreateViewModel()
     {
         AssetInfo[] assets =

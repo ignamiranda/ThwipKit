@@ -5,6 +5,7 @@ using ThwipKit.Core;
 using ThwipKit.Core.Assets;
 using ThwipKit.Core.GameDefinitions;
 using ThwipKit.Core.Games;
+using ThwipKit.Core.Staging;
 using ThwipKit.Wpf.Mvvm;
 using ThwipKit.Wpf.Services;
 using ThwipKit.Wpf.ViewModels;
@@ -20,6 +21,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private AssetBrowserViewModel? _assetBrowser;
     private readonly Dictionary<string, string> _gameDirectories = [];
     private GameDescriptor? _selectedGame;
+    private ProjectManagerViewModel? _projectManager;
 
     public MainWindowViewModel()
     {
@@ -45,6 +47,12 @@ public sealed class MainWindowViewModel : ViewModelBase
     public bool CanSwitchGame => SelectedGame is not null && _gameDirectories.ContainsKey(SelectedGame.InternalId);
 
     public RelayCommand SwitchGameCommand { get; }
+
+    public ProjectManagerViewModel? ProjectManager
+    {
+        get => _projectManager;
+        private set => SetProperty(ref _projectManager, value);
+    }
 
     public string GamePath
     {
@@ -96,7 +104,16 @@ public sealed class MainWindowViewModel : ViewModelBase
             }
 
             var browser = new AssetBrowser(game);
-            var assetBrowser = new AssetBrowserViewModel(new AssetBrowserService(browser, game, _projectRoot), gamePath);
+            var stageManager = new StageManager(game, _projectRoot);
+            var projectManagerVm = new ProjectManagerViewModel(
+                stageManager,
+                browser,
+                Path.Combine(_projectRoot, "projects"));
+            projectManagerVm.AttachGame(game, gamePath);
+            var assetBrowser = new AssetBrowserViewModel(
+                new AssetBrowserService(browser, game, _projectRoot, projectManagerVm.Sink),
+                gamePath);
+            ProjectManager = projectManagerVm;
             AssetBrowser = assetBrowser;
             GamePath = gamePath;
             StatusMessage = $"Loading {game.DisplayName} assets...";
