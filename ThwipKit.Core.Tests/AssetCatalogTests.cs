@@ -272,4 +272,146 @@ public class AssetCatalogTests : IDisposable
 
         Assert.Contains("archive index 3", exception.Message);
     }
+
+    [Fact]
+    public void GetAssetsPopulatesReferencesDependenciesAndUsageCountFromDat1()
+    {
+        byte[] dat1 = TestFileFixtures.BuildSyntheticDat1(
+            ["textures/ui/loading.texture", "config/gameplay.config"]);
+        TestFileFixtures.CreateTocFile(_tocPath, ["Archive0", "Archive1", "Archive2"],
+            assetIds: [0x1111111111111111UL, 0x9EA3A7559DA1C267UL, 0x3333333333333333UL],
+            sizes: [(uint)dat1.Length, 64U, 32U],
+            offsets: [456U, 0U, 0U]);
+
+        TestFileFixtures.CreateDsarFile(Path.Combine(_assetArchivePath, "Archive0"), dat1, realOffset: 456);
+        TestFileFixtures.CreateDsarFile(Path.Combine(_assetArchivePath, "Archive1"),
+            Enumerable.Range(0, 64).Select(i => (byte)(i * 3)).ToArray(), realOffset: 0);
+        TestFileFixtures.CreateDsarFile(Path.Combine(_assetArchivePath, "Archive2"),
+            Enumerable.Range(0, 32).Select(i => (byte)(i * 5)).ToArray(), realOffset: 0);
+
+        var catalog = new AssetCatalog(CreateTestGame());
+
+        IReadOnlyList<AssetInfo> assets = catalog.GetAssets(_gamePath);
+        AssetInfo config = assets[0];
+        AssetInfo texture = assets[1];
+        AssetInfo raw = assets[2];
+
+        Assert.Equal(["textures/ui/loading.texture", "config/gameplay.config"], config.Dependencies);
+        Assert.Equal(0x1111111111111111UL, config.AssetId);
+        Assert.Equal(0x9EA3A7559DA1C267UL, texture.AssetId);
+        Assert.Equal(["0x1111111111111111"], texture.References);
+        Assert.Equal(1U, texture.UsageCount);
+        Assert.NotNull(raw.References);
+        Assert.Empty(raw.References);
+        Assert.Equal(0U, raw.UsageCount);
+        Assert.Null(raw.Dependencies);
+    }
+
+    [Fact]
+    public void GetAssetsLeavesReferenceFieldsNullWhenAssetDataMissing()
+    {
+        var catalog = new AssetCatalog(CreateTestGame());
+
+        IReadOnlyList<AssetInfo> assets = catalog.GetAssets(_gamePath);
+
+        Assert.Single(assets);
+        Assert.Null(assets[0].Dependencies);
+        Assert.Null(assets[0].References);
+        Assert.Null(assets[0].UsageCount);
+    }
+
+    [Fact]
+    public void GetAssetsTreatsMalformedDat1AsNonDat1()
+    {
+        byte[] malformed = new byte[123];
+        "DAT1"u8.ToArray().CopyTo(malformed, 0);
+
+        TestFileFixtures.CreateDsarFile(Path.Combine(_assetArchivePath, "Archive0"), malformed, realOffset: 456);
+
+        var catalog = new AssetCatalog(CreateTestGame());
+
+        IReadOnlyList<AssetInfo> assets = catalog.GetAssets(_gamePath);
+
+        Assert.Single(assets);
+        Assert.Null(assets[0].Dependencies);
+        Assert.NotNull(assets[0].Crc32);
+        Assert.NotNull(assets[0].Crc64);
+    }
+
+    [Fact]
+    public void GetAssetsSetsDependenciesEmptyForDat1WithoutReferences()
+    {
+        byte[] dat1 = new byte[28];
+        using (var stream = new MemoryStream(dat1))
+        using (var writer = new BinaryWriter(stream))
+        {
+            writer.Write((uint)0x44415431);
+            writer.Write((uint)0);
+            writer.Write((uint)28);
+            writer.Write((ushort)0);
+            writer.Write((ushort)0);
+        }
+
+        TestFileFixtures.CreateDsarFile(Path.Combine(_assetArchivePath, "Archive0"), dat1, realOffset: 456);
+
+        var catalog = new AssetCatalog(CreateTestGame());
+
+        IReadOnlyList<AssetInfo> assets = catalog.GetAssets(_gamePath);
+
+        Assert.Single(assets);
+        Assert.NotNull(assets[0].Dependencies);
+        Assert.Empty(assets[0].Dependencies!);
+    }
+
+    [Fact]
+    public void GetAssetsResolvesReferrerPathFromHashTable()
+    {
+        File.WriteAllText(Path.Combine(_assetArchivePath, "hashes.txt"), "0x1111111111111111=configs/menu.config");
+
+        byte[] dat1 = TestFileFixtures.BuildSyntheticDat1(["textures/ui/loading.texture"]);
+        TestFileFixtures.CreateTocFile(_tocPath, ["Archive0", "Archive1"],
+            assetIds: [0x1111111111111111UL, 0x9EA3A7559DA1C267UL],
+            sizes: [(uint)dat1.Length, 64U],
+            offsets: [456U, 0U]);
+
+        TestFileFixtures.CreateDsarFile(Path.Combine(_assetArchivePath, "Archive0"), dat1, realOffset: 456);
+        TestFileFixtures.CreateDsarFile(Path.Combine(_assetArchivePath, "Archive1"),
+            Enumerable.Range(0, 64).Select(i => (byte)(i * 3)).ToArray(), realOffset: 0);
+
+        var catalog = new AssetCatalog(CreateTestGame());
+
+        IReadOnlyList<AssetInfo> assets = catalog.GetAssets(_gamePath);
+
+        Assert.Equal(["configs/menu.config"], assets[1].References);
+        Assert.Equal(1U, assets[1].UsageCount);
+    }
+
+    [Fact]
+    public void GetAssetsDeduplicatesInboundReferrersByIdNotDisplayPath()
+    {
+        File.WriteAllText(Path.Combine(_assetArchivePath, "hashes.txt"),
+            "0x1111111111111111=configs/alpha.config\n" +
+            "0x2222222222222222=configs/menu.config\n" +
+            "0x3333333333333333=configs/alpha.config");
+
+        byte[] dat1 = TestFileFixtures.BuildSyntheticDat1(["textures/ui/loading.texture"]);
+        TestFileFixtures.CreateTocFile(_tocPath, ["Archive0", "Archive1", "Archive2", "Archive3"],
+            assetIds: [0x1111111111111111UL, 0x2222222222222222UL, 0x3333333333333333UL, 0x9EA3A7559DA1C267UL],
+            sizes: [(uint)dat1.Length, (uint)dat1.Length, (uint)dat1.Length, 64U],
+            offsets: [456U, 456U, 456U, 0U]);
+
+        TestFileFixtures.CreateDsarFile(Path.Combine(_assetArchivePath, "Archive0"), dat1, realOffset: 456);
+        TestFileFixtures.CreateDsarFile(Path.Combine(_assetArchivePath, "Archive1"), dat1, realOffset: 456);
+        TestFileFixtures.CreateDsarFile(Path.Combine(_assetArchivePath, "Archive2"), dat1, realOffset: 456);
+        TestFileFixtures.CreateDsarFile(Path.Combine(_assetArchivePath, "Archive3"),
+            Enumerable.Range(0, 64).Select(i => (byte)(i * 3)).ToArray(), realOffset: 0);
+
+        var catalog = new AssetCatalog(CreateTestGame());
+
+        IReadOnlyList<AssetInfo> assets = catalog.GetAssets(_gamePath);
+
+        AssetInfo texture = assets[3];
+        Assert.Equal(["configs/alpha.config", "configs/alpha.config", "configs/menu.config"], texture.References);
+        Assert.Equal(3U, texture.UsageCount);
+    }
 }

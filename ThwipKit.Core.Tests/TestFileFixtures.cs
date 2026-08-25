@@ -1,5 +1,8 @@
 using System.IO.Compression;
+using System.Linq;
 using System.Text;
+using ThwipKit.Core.Dat1;
+using ThwipKit.Core.Hashing;
 
 namespace ThwipKit.Core.Tests;
 
@@ -29,32 +32,45 @@ internal static class TestFileFixtures
         => CreateTocFixture(path, ["Archive0"]);
 
     public static (string Path, byte[] Dat1) CreateTocFixture(string path, IReadOnlyList<string> archiveNames)
+        => CreateTocFixture(path, archiveNames,
+            assetIds: Enumerable.Range(0, archiveNames.Count).Select(i => 0x1122334455667788UL + (ulong)i).ToArray(),
+            sizes: Enumerable.Range(0, archiveNames.Count).Select(i => 123U + (uint)i).ToArray(),
+            offsets: Enumerable.Range(0, archiveNames.Count).Select(i => 456U + (uint)i).ToArray());
+
+    public static (string Path, byte[] Dat1) CreateTocFixture(
+        string path, IReadOnlyList<string> archiveNames,
+        IReadOnlyList<ulong> assetIds, IReadOnlyList<uint> sizes, IReadOnlyList<uint> offsets)
     {
+        if (assetIds.Count != archiveNames.Count || sizes.Count != archiveNames.Count || offsets.Count != archiveNames.Count)
+        {
+            throw new ArgumentException("assetIds, sizes, and offsets must each have one entry per archive.");
+        }
+
         var sections = new[]
         {
             (Tag: new byte[] { 0xF0, 0xBF, 0x8A, 0x39 }, Data: archiveNames.SelectMany(CreateArchiveEntry).ToArray()),
             (Tag: new byte[] { 0x8A, 0x7B, 0x6D, 0x50 }, Data: Write(writer =>
             {
-                for (int i = 0; i < archiveNames.Count; i++)
+                for (int i = 0; i < assetIds.Count; i++)
                 {
-                    writer.Write(0x1122334455667788UL + (ulong)i);
+                    writer.Write(assetIds[i]);
                 }
             })),
             (Tag: new byte[] { 0x61, 0xF4, 0xBC, 0x65 }, Data: Write(writer =>
             {
-                for (int i = 0; i < archiveNames.Count; i++)
+                for (int i = 0; i < sizes.Count; i++)
                 {
                     writer.Write(1U);
-                    writer.Write(123U + (uint)i);
+                    writer.Write(sizes[i]);
                     writer.Write((uint)i);
                 }
             })),
             (Tag: new byte[] { 0xB5, 0x20, 0xD7, 0xDC }, Data: Write(writer =>
             {
-                for (int i = 0; i < archiveNames.Count; i++)
+                for (int i = 0; i < offsets.Count; i++)
                 {
                     writer.Write((uint)i);
-                    writer.Write(456U + (uint)i);
+                    writer.Write(offsets[i]);
                 }
             }))
         };
@@ -103,6 +119,11 @@ internal static class TestFileFixtures
 
     public static string CreateTocFile(string path, IReadOnlyList<string> archiveNames)
         => CreateTocFixture(path, archiveNames).Path;
+
+    public static string CreateTocFile(
+        string path, IReadOnlyList<string> archiveNames,
+        IReadOnlyList<ulong> assetIds, IReadOnlyList<uint> sizes, IReadOnlyList<uint> offsets)
+        => CreateTocFixture(path, archiveNames, assetIds, sizes, offsets).Path;
 
     public static string CreateTocFile() => CreateTocFixture().Path;
 
@@ -164,5 +185,50 @@ internal static class TestFileFixtures
     public static byte[] Combine(params byte[][] arrays)
     {
         return arrays.SelectMany(array => array).ToArray();
+    }
+
+    public static byte[] BuildSyntheticDat1(IReadOnlyList<string> paths)
+    {
+        const int headerSize = 16 + 12;
+        int stringsLength = 0;
+        foreach (var p in paths)
+        {
+            stringsLength += Encoding.UTF8.GetByteCount(p) + 1;
+        }
+
+        int referencesOffset = headerSize + stringsLength;
+        int referencesSize = paths.Count * 16;
+        int total = referencesOffset + referencesSize;
+
+        using var stream = new MemoryStream();
+        using var writer = new BinaryWriter(stream);
+        writer.Write((uint)0x44415431);
+        writer.Write((uint)0);
+        writer.Write((uint)total);
+        writer.Write((ushort)1);
+        writer.Write((ushort)0);
+        writer.Write((uint)ReferencesSection.Tag);
+        writer.Write((uint)referencesOffset);
+        writer.Write((uint)referencesSize);
+
+        var stringOffsets = new List<uint>(paths.Count);
+        int cursor = headerSize;
+        foreach (var p in paths)
+        {
+            byte[] bytes = Encoding.UTF8.GetBytes(p);
+            stringOffsets.Add((uint)cursor);
+            writer.Write(bytes);
+            writer.Write((byte)0);
+            cursor += bytes.Length + 1;
+        }
+
+        for (int i = 0; i < paths.Count; i++)
+        {
+            writer.Write(HashComputer.ComputeAssetId(paths[i]));
+            writer.Write(stringOffsets[i]);
+            writer.Write((uint)0);
+        }
+
+        return stream.ToArray();
     }
 }
