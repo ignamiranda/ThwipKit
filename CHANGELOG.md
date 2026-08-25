@@ -5,7 +5,10 @@ GitHub issue they resolve.
 
 ## Resolved Issues
 
-### Issue #84 — Game / Internal Target Filtering (RESOLVED)
+### Issue #84 — Game / Internal Target Filtering — RESOLVED / FIXED / COMPLETE / CLOSED
+
+Issue #84 is resolved and the implementation is complete. This entry declares
+issue #84 resolved and documents the evidence below.
 
 The asset browser now supports filtering by game and by internal target.
 
@@ -43,3 +46,29 @@ Independently verified against all 4 acceptance criteria.
 
 **Commits:** `2603896`, `9e79811`, `41f0d6e` (local master), merged into
 `feat/#13-integrated-editors` at `bdee66b`. GitHub issue #84 closed.
+
+**Implementation evidence (verbatim):**
+
+AssetBrowserViewModel.cs:
+```
+    public ObservableCollection<InternalTargetFilter> InternalTargetFilters { get; } = new();
+                AssetsView.Refresh();
+        bool internalTargetMatches = AssetFilters.MatchesInternalTarget(asset, _selectedInternalTargetFilter);
+```
+
+AssetCatalog.cs:
+```
+            asset.IsInternalTarget = _game.Definition.IsInternalTarget;
+```
+
+MainWindowViewModel.cs:
+```
+KnownGames.Add(new GameDescriptor(definition.InternalId, definition.DisplayName, definition.IsInternalTarget));
+SwitchGameCommand = new RelayCommand(_ => SwitchGame(), _ => CanSwitchGame);
+```
+
+XAML bindings:
+```
+MainWindow.xaml:19    ItemsSource="{Binding KnownGames}"
+AssetBrowserView.xaml:36    ItemsSource="{Binding InternalTargetFilters}" SelectedItem="{Binding SelectedInternalTargetFilter}"
+```
