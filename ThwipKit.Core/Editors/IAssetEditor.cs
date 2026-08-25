@@ -25,6 +25,37 @@ public interface IAssetEditor
     ValidationResult Validate(string filePath);
 }
 
+/// <summary>
+/// Implemented by editors that keep an in-process undo/redo history for text assets.
+/// Routed through <see cref="EditorRegistry"/> so callers don't need to know the
+/// concrete editor type.
+/// </summary>
+public interface IUndoCapableEditor
+{
+    bool SupportsUndo { get; }
+
+    void InitializeUndo(string filePath, string content);
+
+    void RecordChange(string filePath, string content);
+
+    bool CanUndo(string filePath);
+
+    bool CanRedo(string filePath);
+
+    string? Undo(string filePath);
+
+    string? Redo(string filePath);
+}
+
+/// <summary>
+/// Implemented by editors that can launch a configured external tool for a file.
+/// Routed through <see cref="EditorRegistry.LaunchExternalEditor"/>.
+/// </summary>
+public interface IExternalEditorLauncher
+{
+    int LaunchExternalEditor(string filePath);
+}
+
 public sealed class ValidationResult
 {
     public bool IsValid => Errors.Count == 0;

@@ -6,10 +6,12 @@ using ThwipKit.Core.Staging;
 
 namespace ThwipKit.Core.Editors;
 
-public sealed class TextureEditor : IAssetEditor
+public sealed class TextureEditor : IAssetEditor, IUndoCapableEditor, IExternalEditorLauncher
 {
     private readonly ArchiveManager _archiveManager;
     private readonly AssetValidator _validator;
+    private readonly EditorUndoSupport _undo = new();
+    private readonly ExternalToolLauncher _launcher = new(new EditorPreferences());
 
     public EditorCapabilities Capabilities { get; } = new()
     {
@@ -48,10 +50,29 @@ public sealed class TextureEditor : IAssetEditor
 
     public bool RestoreFromBackup(string gamePath, string textureName)
         => _archiveManager.RestoreTextureFromBackup(gamePath, textureName);
+
+    public bool SupportsUndo => true;
+
+    public void InitializeUndo(string filePath, string content) => _undo.Initialize(filePath, content);
+
+    public void RecordChange(string filePath, string content) => _undo.Record(filePath, content);
+
+    public bool CanUndo(string filePath) => _undo.CanUndo(filePath);
+
+    public bool CanRedo(string filePath) => _undo.CanRedo(filePath);
+
+    public string? Undo(string filePath) => _undo.Undo(filePath);
+
+    public string? Redo(string filePath) => _undo.Redo(filePath);
+
+    public int LaunchExternalEditor(string filePath) => _launcher.Launch(filePath);
 }
 
-public sealed class ConfigEditor : IAssetEditor
+public sealed class ConfigEditor : IAssetEditor, IUndoCapableEditor, IExternalEditorLauncher
 {
+    private readonly EditorUndoSupport _undo = new();
+    private readonly ExternalToolLauncher _launcher = new(new EditorPreferences());
+
     public EditorCapabilities Capabilities { get; } = new()
     {
         EditorName = "Config Editor",
@@ -156,4 +177,20 @@ public sealed class ConfigEditor : IAssetEditor
 
         return string.Join(Environment.NewLine, diffLines);
     }
+
+    public bool SupportsUndo => true;
+
+    public void InitializeUndo(string filePath, string content) => _undo.Initialize(filePath, content);
+
+    public void RecordChange(string filePath, string content) => _undo.Record(filePath, content);
+
+    public bool CanUndo(string filePath) => _undo.CanUndo(filePath);
+
+    public bool CanRedo(string filePath) => _undo.CanRedo(filePath);
+
+    public string? Undo(string filePath) => _undo.Undo(filePath);
+
+    public string? Redo(string filePath) => _undo.Redo(filePath);
+
+    public int LaunchExternalEditor(string filePath) => _launcher.Launch(filePath);
 }

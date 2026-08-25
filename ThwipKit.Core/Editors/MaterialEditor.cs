@@ -9,9 +9,12 @@ using ThwipKit.Core.Staging;
 
 namespace ThwipKit.Core.Editors;
 
-public sealed class MaterialEditor : IAssetEditor
+public sealed class MaterialEditor : IAssetEditor, IUndoCapableEditor, IExternalEditorLauncher
 {
     private readonly AssetValidator _validator;
+    private readonly GameBase _game;
+    private readonly EditorUndoSupport _undo = new();
+    private readonly ExternalToolLauncher _launcher = new(new EditorPreferences());
 
     public EditorCapabilities Capabilities { get; } = new()
     {
@@ -24,7 +27,8 @@ public sealed class MaterialEditor : IAssetEditor
 
     public MaterialEditor(GameBase game)
     {
-        _validator = new AssetValidator(game ?? throw new ArgumentNullException(nameof(game)));
+        _game = game ?? throw new ArgumentNullException(nameof(game));
+        _validator = new AssetValidator(_game);
     }
 
     public bool CanHandle(string filePath)
@@ -67,6 +71,78 @@ public sealed class MaterialEditor : IAssetEditor
         var options = new JsonSerializerOptions { WriteIndented = true };
         File.WriteAllText(filePath, JsonSerializer.Serialize(manifest, options));
     }
+
+    /// <summary>
+    /// Suggests existing texture references known to the game (resolved from the
+    /// community hash table) that contain <paramref name="partial"/>. Used to
+    /// autocomplete ShaderTexture slots in the editor UI.
+    /// </summary>
+    public IReadOnlyList<string> SuggestTextureReferences(string gamePath, string partial, int maxSuggestions = 50)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(gamePath);
+
+        IReadOnlyDictionary<string, string>? hashTable = LoadHashTable(gamePath);
+        if (hashTable is null)
+        {
+            return [];
+        }
+
+        string needle = (partial ?? string.Empty).Trim().ToLowerInvariant();
+        var matches = new List<string>();
+
+        foreach (string name in hashTable.Values)
+        {
+            if (needle.Length == 0 || name.ToLowerInvariant().Contains(needle))
+            {
+                matches.Add(name);
+                if (matches.Count >= maxSuggestions)
+                {
+                    break;
+                }
+            }
+        }
+
+        return matches;
+    }
+
+    public bool SupportsUndo => true;
+
+    public void InitializeUndo(string filePath, string content) => _undo.Initialize(filePath, content);
+
+    public void RecordChange(string filePath, string content) => _undo.Record(filePath, content);
+
+    public bool CanUndo(string filePath) => _undo.CanUndo(filePath);
+
+    public bool CanRedo(string filePath) => _undo.CanRedo(filePath);
+
+    public string? Undo(string filePath) => _undo.Undo(filePath);
+
+    public string? Redo(string filePath) => _undo.Redo(filePath);
+
+    public int LaunchExternalEditor(string filePath) => _launcher.Launch(filePath);
+
+    private IReadOnlyDictionary<string, string>? LoadHashTable(string gamePath)
+    {
+        if (_hashTableCache.TryGetValue(gamePath, out IReadOnlyDictionary<string, string>? cached))
+        {
+            return cached;
+        }
+
+        IReadOnlyDictionary<string, string>? loaded;
+        try
+        {
+            loaded = _game.LoadHashTable(gamePath);
+        }
+        catch
+        {
+            loaded = null;
+        }
+
+        _hashTableCache[gamePath] = loaded;
+        return loaded;
+    }
+
+    private readonly Dictionary<string, IReadOnlyDictionary<string, string>?> _hashTableCache = [];
 }
 
 public sealed class MaterialManifest

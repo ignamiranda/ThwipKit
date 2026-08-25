@@ -133,4 +133,12 @@ public partial class MainWindow : Window
             pm.Build(testBuild);
         }
     }
+
+    private void GameCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel viewModel && viewModel.CanSwitchGame)
+        {
+            viewModel.SwitchGameCommand.Execute(null);
+        }
+    }
 }
