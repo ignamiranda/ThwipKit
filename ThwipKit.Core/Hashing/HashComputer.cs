@@ -16,7 +16,7 @@ public static class HashComputer
     {
         string normalized = HashNormalizer.Normalize(path);
         byte[] bytes = Encoding.UTF8.GetBytes(normalized);
-        ulong value = Crc64.Compute(bytes, Crc64.InitialValue);
+        ulong value = InsomniacCrc64.Compute(bytes, InsomniacCrc64.InitialValue);
         return (value >> 2) | TopBit;
     }
 

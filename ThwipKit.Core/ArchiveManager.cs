@@ -364,6 +364,52 @@ namespace ThwipKit.Core
             return blocks;
         }
 
+        /// <summary>
+        /// Decompresses every block of a DSAR archive and yields the raw (decompressed) bytes of
+        /// each block. Used by the runtime hash-table generator to reach the DAT1 data files that
+        /// carry asset-reference sections; callers scan the returned buffers for DAT1 containers.
+        /// </summary>
+        internal IEnumerable<byte[]> EnumerateDecompressedBlocks(string archivePath)
+        {
+            if (string.IsNullOrWhiteSpace(archivePath) || !File.Exists(archivePath))
+            {
+                yield break;
+            }
+
+            List<DsarBlockHeader> blocks = ReadDsarBlocks(archivePath);
+            using FileStream fs = new FileStream(archivePath, FileMode.Open, FileAccess.Read);
+            using BinaryReader reader = new BinaryReader(fs);
+            foreach (DsarBlockHeader block in blocks)
+            {
+                fs.Seek(block.CompressedOffset, SeekOrigin.Begin);
+                byte[] compressedBlock = reader.ReadBytes((int)block.CompressedSize);
+                yield return DecompressBlock(block, compressedBlock);
+            }
+        }
+
+        private static byte[] DecompressBlock(DsarBlockHeader block, byte[] compressedBlock)
+        {
+            CompressionFormat format = ResolveDsarCompressionType(block.CompressionType);
+            if (!CompressionSupport.IsImplemented(format))
+            {
+                throw new NotSupportedException($"Compression format '{format}' declared in DSAR block is not implemented.");
+            }
+
+            if (format == CompressionFormat.Lz4)
+            {
+                byte[] decompressed = new byte[block.RealSize];
+                K4os.Compression.LZ4.LZ4Codec.Decode(compressedBlock, decompressed);
+                return decompressed;
+            }
+
+            if (format == CompressionFormat.None)
+            {
+                return compressedBlock;
+            }
+
+            throw new NotSupportedException($"Compression format '{format}' is recognized but has no decoder.");
+        }
+
         private bool SimulateTextureToPngConversion(byte[] textureData, string pngFilePath)
         {
             try
