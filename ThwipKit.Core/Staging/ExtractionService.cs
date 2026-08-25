@@ -4,8 +4,6 @@ using System.IO;
 using System.Linq;
 using ThwipKit.Core.Assets;
 using ThwipKit.Core.Games;
-using ThwipKit.Core.Sections;
-using ThwipKit.Core.Staging;
 
 namespace ThwipKit.Core.Staging;
 
@@ -15,14 +13,21 @@ public sealed class ExtractionService
     private readonly StageManager _stageManager;
     private readonly ArchiveManager _archiveManager;
     private readonly AssetBrowser _assetBrowser;
+    private readonly IAssetTrackingSink? _trackingSink;
 
-    public ExtractionService(GameBase game, StageManager stageManager, ArchiveManager archiveManager)
+    public ExtractionService(GameBase game, StageManager stageManager, ArchiveManager archiveManager, IAssetTrackingSink? trackingSink = null)
     {
         _game = game ?? throw new ArgumentNullException(nameof(game));
         _stageManager = stageManager ?? throw new ArgumentNullException(nameof(stageManager));
         _archiveManager = archiveManager ?? throw new ArgumentNullException(nameof(archiveManager));
+        _trackingSink = trackingSink;
         _assetBrowser = new AssetBrowser(game);
     }
+
+    public string GetCanonicalRelativePath(AssetInfo asset)
+        => !string.IsNullOrWhiteSpace(asset.ResolvedName)
+            ? asset.ResolvedName.TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            : $"{asset.ArchiveName}_{asset.Offset}.bin";
 
     public void ExtractSingleAsset(string gamePath, ulong assetId, string assetType = "texture")
     {
@@ -32,7 +37,7 @@ public sealed class ExtractionService
             throw new InvalidDataException($"Asset ID 0x{assetId:X16} not found in TOC");
         }
 
-        string relativePath = $"{asset.ArchiveName}_offset_{asset.Offset}";
+        string relativePath = GetCanonicalRelativePath(asset);
         _stageManager.EnsureStageDirectoryExistsForAsset(assetType, relativePath);
 
         string archivePath = Path.Combine(gamePath, _game.ArchiveDirectory, asset.ArchiveName);
@@ -40,6 +45,11 @@ public sealed class ExtractionService
 
         string stagePath = _stageManager.GetAssetStagePath(assetType, relativePath);
         File.WriteAllBytes(stagePath, assetData);
+
+        _trackingSink?.OnAssetExtracted(
+            assetId,
+            Path.Combine(_game.InternalId, assetType, relativePath).Replace('\\', '/'),
+            asset);
     }
 
     public void ExtractMultipleAssets(string gamePath, IEnumerable<ulong> assetIds, string assetType = "texture")

@@ -20,12 +20,15 @@ public sealed class AssetBrowserService : IAssetBrowserService
     private readonly GameBase _game;
     private readonly string _projectRoot;
 
-    public AssetBrowserService(AssetBrowser browser, GameBase game, string projectRoot)
+    public AssetBrowserService(AssetBrowser browser, GameBase game, string projectRoot, IAssetTrackingSink? trackingSink = null)
     {
         _browser = browser ?? throw new ArgumentNullException(nameof(browser));
         _game = game ?? throw new ArgumentNullException(nameof(game));
         _projectRoot = projectRoot ?? throw new ArgumentNullException(nameof(projectRoot));
+        TrackingSink = trackingSink;
     }
+
+    public IAssetTrackingSink? TrackingSink { get; set; }
 
     public IReadOnlyList<AssetInfo> GetAllAssets(string gamePath)
         => _browser.GetAllAssets(gamePath);
@@ -36,7 +39,7 @@ public sealed class AssetBrowserService : IAssetBrowserService
 
         var stageManager = new StageManager(_game, _projectRoot);
         var archiveManager = new ArchiveManager(_game);
-        var extractionService = new ExtractionService(_game, stageManager, archiveManager);
+        var extractionService = new ExtractionService(_game, stageManager, archiveManager, TrackingSink);
         extractionService.ExtractSingleAsset(gamePath, asset.AssetId, asset.Type.ToStageFolderName());
     }
 
@@ -51,7 +54,7 @@ public sealed class AssetBrowserService : IAssetBrowserService
         var stageManager = new StageManager(_game, _projectRoot);
         var archiveManager = new ArchiveManager(_game);
         var backupSystem = new BackupSystem(gamePath, System.IO.Path.Combine(_projectRoot, "backups"));
-        var replacementService = new ReplacementService(_game, stageManager, archiveManager, backupSystem);
+        var replacementService = new ReplacementService(_game, stageManager, archiveManager, backupSystem, TrackingSink);
         replacementService.ReplaceAsset(gamePath, asset, replacementFilePath);
     }
 
@@ -61,8 +64,13 @@ public sealed class AssetBrowserService : IAssetBrowserService
 
         ExtractAsset(asset, gamePath);
 
-        string stagedPath = new StageManager(_game, _projectRoot)
-            .GetAssetStagePath(asset.Type.ToStageFolderName(), GetRelativePath(asset));
+        var stageManager = new StageManager(_game, _projectRoot);
+        var archiveManager = new ArchiveManager(_game);
+        var extractionService = new ExtractionService(_game, stageManager, archiveManager, TrackingSink);
+        string stagedPath = stageManager.GetAssetStagePath(
+            asset.Type.ToStageFolderName(),
+            extractionService.GetCanonicalRelativePath(asset));
+
         if (System.IO.File.Exists(stagedPath))
         {
             Process.Start(new ProcessStartInfo
@@ -71,15 +79,5 @@ public sealed class AssetBrowserService : IAssetBrowserService
                 UseShellExecute = true
             });
         }
-    }
-
-    private static string GetRelativePath(AssetInfo asset)
-    {
-        if (!string.IsNullOrWhiteSpace(asset.ResolvedName))
-        {
-            return asset.ResolvedName!;
-        }
-
-        return asset.AssetIdHex + ".bin";
     }
 }
